@@ -1,98 +1,203 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState, useContext } from 'react';
+import { StyleSheet, TextInput, View, Text, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { PropertyContext } from '../context/PropertyContext';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function AddPropertyScreen() {
+  const propertyContext = useContext(PropertyContext);
 
-export default function HomeScreen() {
+  const [address, setAddress] = useState('');
+  const [sector, setSector] = useState('');
+  const [size, setSize] = useState('');
+  const [price, setPrice] = useState('');
+  const [notes, setNotes] = useState('');
+  const [facing, setFacing] = useState('');
+  const [contact, setContact] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+
+  const AVAILABLE_TAGS = ['PARK FACING', 'HIGHWAY FACING', 'CORNER', 'MAIN ROAD', 'GATED SOCIETY', 'BUILDER FLOOR'];
+
+  const toggleTag = (tag: string) => {
+    setTags((prev) => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  };
+
+  const handleSubmit = () => {
+    if (!address || !sector || !size || !price) {
+      Alert.alert('Error', 'Please fill in the required fields (Address, Sector, Size, Price)');
+      return;
+    }
+
+    if (propertyContext) {
+      propertyContext.addProperty({
+        address,
+        sector,
+        size,
+        price,
+        notes,
+        facing,
+        contact,
+        tags,
+      });
+
+      // Reset form
+      setAddress('');
+      setSector('');
+      setSize('');
+      setPrice('');
+      setNotes('');
+      setFacing('');
+      setContact('');
+      setTags([]);
+
+      Alert.alert('Success', 'Property added successfully!');
+    }
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={100}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.headerContainer}>
+          <Text style={styles.title}>Add New Property</Text>
+          <Text style={styles.subtitle}>Enter the details below to add a property.</Text>
+        </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Address *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. 123 Main St"
+            placeholderTextColor="#888"
+            value={address}
+            onChangeText={setAddress}
+          />
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Sector *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. Sector 15"
+            placeholderTextColor="#888"
+            value={sector}
+            onChangeText={setSector}
+          />
+        </View>
+
+        <View style={styles.row}>
+          <View style={[styles.formGroup, styles.halfWidth]}>
+            <Text style={styles.label}>Size (sq m) *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 1500"
+              placeholderTextColor="#888"
+              keyboardType="numeric"
+              value={size}
+              onChangeText={setSize}
+            />
+          </View>
+
+          <View style={[styles.formGroup, styles.halfWidth]}>
+            <Text style={styles.label}>Price *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 500000"
+              placeholderTextColor="#888"
+              keyboardType="numeric"
+              value={price}
+              onChangeText={setPrice}
+            />
+          </View>
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Facing</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. North, East"
+            placeholderTextColor="#888"
+            value={facing}
+            onChangeText={setFacing}
+          />
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Contact Number</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. 9876543210"
+            placeholderTextColor="#888"
+            keyboardType="phone-pad"
+            value={contact}
+            onChangeText={setContact}
+          />
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Tags</Text>
+          <View style={styles.tagsContainer}>
+            {AVAILABLE_TAGS.map((tag) => {
+              const isActive = tags.includes(tag);
+              return (
+                <TouchableOpacity 
+                  key={tag} 
+                  style={[styles.tagPill, isActive && styles.tagPillActive]} 
+                  onPress={() => toggleTag(tag)}
+                >
+                  <Text style={[styles.tagPillText, isActive && styles.tagPillTextActive]}>{tag}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Notes</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Additional details..."
+            placeholderTextColor="#888"
+            multiline
+            numberOfLines={4}
+            value={notes}
+            onChangeText={setNotes}
+          />
+        </View>
+
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+          <Text style={styles.submitButtonText}>Save Property</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  scrollContent: { padding: 24, paddingTop: 80, paddingBottom: 60 },
+  headerContainer: { marginBottom: 40 },
+  title: { fontSize: 36, fontWeight: '900', color: '#0F172A', letterSpacing: -0.75, marginBottom: 8 },
+  subtitle: { fontSize: 16, color: '#64748B', lineHeight: 24, fontWeight: '500' },
+  formGroup: { marginBottom: 24 },
+  row: { flexDirection: 'row', justifyContent: 'space-between' },
+  halfWidth: { width: '48%' },
+  label: { fontSize: 12, fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, marginLeft: 4 },
+  input: {
+    backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#F1F5F9', borderRadius: 20,
+    paddingHorizontal: 20, paddingVertical: 18, fontSize: 16, color: '#0F172A', fontWeight: '500',
+    shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.02, shadowRadius: 10, elevation: 2,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
+  tagPill: { backgroundColor: '#FFFFFF', borderRadius: 24, paddingVertical: 10, paddingHorizontal: 18, borderWidth: 1.5, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 4, elevation: 1 },
+  tagPillActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5', shadowColor: '#4F46E5', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 4 } },
+  tagPillText: { fontSize: 13, fontWeight: '700', color: '#64748B', letterSpacing: 0.3 },
+  tagPillTextActive: { color: '#FFFFFF' },
+  textArea: { height: 130, paddingTop: 18, textAlignVertical: 'top' },
+  submitButton: {
+    backgroundColor: '#4F46E5', borderRadius: 20, paddingVertical: 18, alignItems: 'center', marginTop: 24,
+    shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  submitButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
 });
