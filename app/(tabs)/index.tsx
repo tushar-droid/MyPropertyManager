@@ -1,6 +1,6 @@
-import React, { useState, useContext } from 'react';
-import { StyleSheet, TextInput, View, Text, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { PropertyContext } from '../context/PropertyContext';
+import React, { useContext, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { PropertyContext } from '@/context/PropertyContext';
 
 export default function AddPropertyScreen() {
   const propertyContext = useContext(PropertyContext);
@@ -141,9 +141,9 @@ export default function AddPropertyScreen() {
             {AVAILABLE_TAGS.map((tag) => {
               const isActive = tags.includes(tag);
               return (
-                <TouchableOpacity 
-                  key={tag} 
-                  style={[styles.tagPill, isActive && styles.tagPillActive]} 
+                <TouchableOpacity
+                  key={tag}
+                  style={[styles.tagPill, isActive && styles.tagPillActive]}
                   onPress={() => toggleTag(tag)}
                 >
                   <Text style={[styles.tagPillText, isActive && styles.tagPillTextActive]}>{tag}</Text>
@@ -201,3 +201,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
 });
+
+
+
+// const { data: todos, error } = await supabase.from('todos').select('*');

@@ -1,6 +1,7 @@
 import React, { useContext, useState, useMemo } from 'react';
-import { StyleSheet, View, Text, FlatList, SafeAreaView, TouchableOpacity, TextInput, Modal, Alert, ScrollView, Dimensions } from 'react-native';
-import { PropertyContext } from '../context/PropertyContext';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, Modal, Alert, ScrollView, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { PropertyContext } from '@/context/PropertyContext';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function ListScreen() {
@@ -26,15 +27,16 @@ export default function ListScreen() {
 
   const AVAILABLE_TAGS = ['PARK FACING', 'HIGHWAY FACING', 'CORNER', 'MAIN ROAD', 'GATED SOCIETY', 'BUILDER FLOOR'];
 
-  if (!propertyContext) return <View><Text>Loading...</Text></View>;
-  const { properties, deleteProperty, updateProperty } = propertyContext;
-
   const availableSectors = useMemo(() => {
+    if (!propertyContext) return ['ALL'];
+    const { properties } = propertyContext;
     const sectors = properties.map(p => p.sector).filter(Boolean);
     return ['ALL', ...Array.from(new Set(sectors)).sort()];
-  }, [properties]);
+  }, [propertyContext?.properties]);
 
   const filteredProperties = useMemo(() => {
+    if (!propertyContext) return [];
+    const { properties } = propertyContext;
     return properties.filter((p) => {
       const pPrice = parseFloat(p.price);
       const pSize = parseFloat(p.size);
@@ -55,7 +57,10 @@ export default function ListScreen() {
 
       return true;
     });
-  }, [properties, minPrice, maxPrice, minSize, maxSize, facingFilter, tagFilters, sectorFilter]);
+  }, [propertyContext?.properties, minPrice, maxPrice, minSize, maxSize, facingFilter, tagFilters, sectorFilter]);
+
+  if (!propertyContext) return <View><Text>Loading...</Text></View>;
+  const { deleteProperty, updateProperty } = propertyContext;
 
   const handleDelete = (id: string) => {
     Alert.alert("Delete", "Are you sure you want to delete this property?", [
@@ -127,9 +132,9 @@ export default function ListScreen() {
       <View style={styles.detailsContainer}>
         <Text style={styles.details}>Sector: <Text style={styles.bold}>{item.sector}</Text></Text>
         <Text style={styles.details}>Size: <Text style={styles.bold}>{item.size} sq m</Text></Text>
-        <View style={styles.facingContainer}>
+        <View style={[styles.facingContainer, isGridView && { flexWrap: 'wrap' }]}>
           <Text style={styles.details}>Facing: </Text>
-          <View style={[styles.facingBadge, { backgroundColor: getFacingStyle(item.facing).bg }]}>
+          <View style={[styles.facingBadge, { backgroundColor: getFacingStyle(item.facing).bg }, isGridView && { marginLeft: 0, marginTop: 4 }]}>
             <Text style={[styles.facingBadgeText, { color: getFacingStyle(item.facing).text }]}>{item.facing}</Text>
           </View>
         </View>
@@ -141,11 +146,11 @@ export default function ListScreen() {
         </View>
       )}
       
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
+      <View style={[styles.actions, isGridView && { flexDirection: 'column', gap: 8 }]}>
+        <TouchableOpacity style={[styles.editBtn, isGridView && { width: '100%' }]} onPress={() => openEdit(item)}>
           <Text style={styles.editBtnText}>Edit</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id)}>
+        <TouchableOpacity style={[styles.deleteBtn, isGridView && { width: '100%' }]} onPress={() => handleDelete(item.id)}>
           <Text style={styles.deleteBtnText}>Delete</Text>
         </TouchableOpacity>
       </View>
@@ -344,10 +349,6 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 36, fontWeight: '900', color: '#0F172A', letterSpacing: -0.75 },
   toggleBtn: { padding: 12, backgroundColor: '#EEF2FF', borderRadius: 16 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  syncBadge: { fontSize: 11, fontWeight: '700', color: '#059669', marginTop: 2 },
-  localBadge: { fontSize: 11, fontWeight: '700', color: '#94A3B8', marginTop: 2 },
-  refreshBtn: { padding: 10, backgroundColor: '#EEF2FF', borderRadius: 14 },
   filtersContainer: { marginBottom: 24, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24, shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.04, shadowRadius: 16, elevation: 3, borderWidth: 1, borderColor: '#F8FAFC' },
   filterTitle: { fontSize: 12, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 },
   filterRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
@@ -366,7 +367,7 @@ const styles = StyleSheet.create({
   listContent: { padding: 24 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, marginBottom: 24, shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 5, borderWidth: 1, borderColor: '#F8FAFC' },
   listCard: { width: '100%' },
-  gridCard: { width: Dimensions.get('window').width / 2 - 30, marginHorizontal: 6, padding: 16 },
+  gridCard: { width: (Dimensions.get('window').width - 60) / 2, marginHorizontal: 6, padding: 12 },
   cardHeader: { marginBottom: 16 },
   address: { fontSize: 18, fontWeight: '900', color: '#0F172A', marginBottom: 6, letterSpacing: -0.25 },
   price: { fontSize: 24, fontWeight: '900', color: '#047857', letterSpacing: -0.5 },
