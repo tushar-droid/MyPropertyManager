@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -22,6 +24,7 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<'login' | 'signup'>('login');
+    const colorScheme = useColorScheme();
 
     async function handleAuth() {
         if (!email || !password) {
@@ -57,20 +60,22 @@ export default function Login() {
         setLoading(false);
     }
 
+    const tint = Colors[colorScheme ?? 'light'].tint;
+
     return (
         <KeyboardAvoidingView 
             style={styles.container} 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
             <LinearGradient
-                colors={['#4F46E5', '#7C3AED', '#C026D3']}
+                colors={[tint, '#2D4A85', '#64748B']}
                 style={styles.background}
             />
             
             <View style={styles.content}>
                 <View style={styles.header}>
                     <Text style={styles.title}>
-                        {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+                        {mode === 'login' ? 'WELCOME BACK' : 'CREATE ACCOUNT'}
                     </Text>
                     <Text style={styles.subtitle}>
                         {mode === 'login' 
@@ -80,14 +85,14 @@ export default function Login() {
                 </View>
 
                 <View style={styles.formContainer}>
-                    <BlurView intensity={20} tint="light" style={styles.glassCard}>
+                    <BlurView intensity={30} tint="light" style={styles.glassCard}>
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Email Address</Text>
                             <TextInput
                                 value={email}
                                 onChangeText={setEmail}
                                 placeholder="name@example.com"
-                                placeholderTextColor="rgba(255,255,255,0.5)"
+                                placeholderTextColor="rgba(255, 255, 255, 0.4)"
                                 autoCapitalize="none"
                                 keyboardType="email-address"
                                 style={styles.input}
@@ -100,7 +105,7 @@ export default function Login() {
                                 value={password}
                                 onChangeText={setPassword}
                                 placeholder="••••••••"
-                                placeholderTextColor="rgba(255,255,255,0.5)"
+                                placeholderTextColor="rgba(255, 255, 255, 0.4)"
                                 secureTextEntry
                                 autoCapitalize="none"
                                 style={styles.input}
@@ -113,10 +118,10 @@ export default function Login() {
                             disabled={loading}
                         >
                             {loading ? (
-                                <ActivityIndicator color="#4F46E5" />
+                                <ActivityIndicator color={tint} />
                             ) : (
                                 <Text style={styles.mainButtonText}>
-                                    {mode === 'login' ? 'Sign In' : 'Get Started'}
+                                    {mode === 'login' ? 'SIGN IN' : 'GET STARTED'}
                                 </Text>
                             )}
                         </TouchableOpacity>
@@ -131,7 +136,7 @@ export default function Login() {
                     </Text>
                     <TouchableOpacity onPress={() => setMode(mode === 'login' ? 'signup' : 'login')}>
                         <Text style={styles.toggleText}>
-                            {mode === 'login' ? ' Sign Up' : ' Sign In'}
+                            {mode === 'login' ? ' SIGN UP' : ' SIGN IN'}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -149,7 +154,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         top: 0,
-        height: height,
+        bottom: 0,
     },
     content: {
         flex: 1,
@@ -157,22 +162,23 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     header: {
-        marginBottom: 40,
+        marginBottom: 50,
         alignItems: 'center',
     },
     title: {
-        fontSize: 40,
+        fontSize: 42,
         fontWeight: '900',
         color: '#FFFFFF',
         letterSpacing: -1,
-        marginBottom: 10,
+        marginBottom: 8,
         textAlign: 'center',
     },
     subtitle: {
-        fontSize: 18,
-        color: 'rgba(255,255,255,0.8)',
+        fontSize: 16,
+        color: 'rgba(255,255,255,0.7)',
         fontWeight: '500',
         textAlign: 'center',
+        letterSpacing: 0.5,
     },
     formContainer: {
         marginBottom: 30,
@@ -182,25 +188,26 @@ const styles = StyleSheet.create({
         padding: 30,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
+        borderColor: 'rgba(255,255,255,0.3)',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
     },
     inputGroup: {
         marginBottom: 20,
     },
     label: {
-        fontSize: 13,
-        fontWeight: '700',
+        fontSize: 12,
+        fontWeight: '800',
         color: '#FFFFFF',
         textTransform: 'uppercase',
-        letterSpacing: 1,
+        letterSpacing: 1.5,
         marginBottom: 8,
         marginLeft: 4,
     },
     input: {
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 16,
         paddingHorizontal: 20,
-        paddingVertical: 18,
+        paddingVertical: 16,
         fontSize: 16,
         color: '#FFFFFF',
         borderWidth: 1,
@@ -208,34 +215,34 @@ const styles = StyleSheet.create({
     },
     mainButton: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 20,
+        borderRadius: 16,
         paddingVertical: 20,
         alignItems: 'center',
         marginTop: 10,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 15,
+        elevation: 6,
     },
     buttonDisabled: {
-        opacity: 0.8,
+        opacity: 0.7,
     },
     mainButtonText: {
         color: '#4F46E5',
-        fontSize: 18,
-        fontWeight: '800',
-        letterSpacing: 0.5,
+        fontSize: 20,
+        fontWeight: '900',
+        letterSpacing: 1,
     },
     footer: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
+        marginTop: 20,
     },
     footerText: {
-        color: 'rgba(255,255,255,0.7)',
-        fontSize: 16,
-        fontWeight: '500',
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 15,
     },
     toggleText: {
         color: '#FFFFFF',

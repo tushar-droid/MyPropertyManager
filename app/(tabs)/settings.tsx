@@ -1,15 +1,14 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/utils/supabase';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function SettingsScreen() {
-  
   const handleLogout = async () => {
     Alert.alert(
-      "Logout",
-      "Are you sure you want to log out?",
+      "Confirm Logout",
+      "Are you sure you want to log out of your account?",
       [
         { text: "Cancel", style: "cancel" },
         { 
@@ -28,48 +27,62 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>Manage your account and app preferences.</Text>
-        </View>
-
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Settings</Text>
+        
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.sectionLabel}>Account</Text>
           <View style={styles.card}>
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <View style={styles.logoutContent}>
-                <View style={[styles.iconContainer, { backgroundColor: '#FEE2E2' }]}>
-                  <IconSymbol name="rectangle.portrait.and.arrow.right" size={20} color="#DC2626" />
-                </View>
-                <Text style={styles.logoutText}>Log Out</Text>
+            <TouchableOpacity style={styles.settingItem} onPress={handleLogout}>
+              <View style={[styles.iconContainer, { backgroundColor: '#FEE2E2' }]}>
+                <IconSymbol name="list.bullet" size={20} color="#DC2626" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingLabel, { color: '#DC2626' }]}>Sign Out</Text>
+                <Text style={styles.settingSublabel}>Log out of your account securely</Text>
               </View>
               <IconSymbol name="chevron.right" size={16} color="#CBD5E1" />
             </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.version}>Version 1.0.0</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>App Information</Text>
+          <View style={styles.card}>
+            <View style={styles.settingItem}>
+              <View style={[styles.iconContainer, { backgroundColor: '#EEF2FF' }]}>
+                <IconSymbol name="house.fill" size={20} color="#4F46E5" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={styles.settingLabel}>Version</Text>
+                <Text style={styles.settingSublabel}>1.0.0 (Build 42)</Text>
+              </View>
+            </View>
+          </View>
         </View>
-      </View>
+
+        <View style={styles.footer}>
+            <Text style={styles.footerText}>My Property Manager</Text>
+            <Text style={styles.footerSubtext}>Surgical Theme Revert Completed</Text>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { flex: 1, padding: 24, paddingTop: 40 },
-  header: { marginBottom: 40 },
-  title: { fontSize: 36, fontWeight: '900', color: '#0F172A', letterSpacing: -0.75, marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#64748B', fontWeight: '500', lineHeight: 24 },
+  content: { padding: 24, paddingBottom: 100 },
+  title: { fontSize: 32, fontWeight: '900', color: '#0F172A', marginBottom: 32, letterSpacing: -0.5 },
   section: { marginBottom: 32 },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16, marginLeft: 4 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 24, paddingVertical: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.02, shadowRadius: 10, elevation: 2, borderWidth: 1, borderColor: '#F1F5F9' },
-  logoutButton: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
-  logoutContent: { flexDirection: 'row', alignItems: 'center' },
-  iconContainer: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
-  logoutText: { fontSize: 17, fontWeight: '600', color: '#0F172A' },
-  footer: { marginTop: 'auto', alignItems: 'center', paddingBottom: 20 },
-  version: { fontSize: 14, color: '#CBD5E1', fontWeight: '500' },
+  sectionLabel: { fontSize: 13, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12, marginLeft: 4 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 8, shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 10, elevation: 2, borderWidth: 1, borderColor: '#F1F5F9' },
+  settingItem: { flexDirection: 'row', alignItems: 'center', padding: 12 },
+  iconContainer: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+  settingTextContainer: { flex: 1 },
+  settingLabel: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
+  settingSublabel: { fontSize: 13, color: '#94A3B8', marginTop: 2 },
+  footer: { marginTop: 40, alignItems: 'center' },
+  footerText: { fontSize: 16, fontWeight: '800', color: '#64748B' },
+  footerSubtext: { fontSize: 12, color: '#94A3B8', marginTop: 4 },
 });

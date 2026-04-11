@@ -1,11 +1,15 @@
 import React, { useContext, useState, useMemo } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, Modal, Alert, ScrollView, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, Modal, Alert, ScrollView, Dimensions, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PropertyContext } from '@/context/PropertyContext';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function ListScreen() {
   const propertyContext = useContext(PropertyContext);
+  const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets();
 
   const [isGridView, setIsGridView] = useState(false);
   const [minPrice, setMinPrice] = useState('');
@@ -50,7 +54,6 @@ export default function ListScreen() {
       
       if (tagFilters.length > 0) {
         if (!p.tags || p.tags.length === 0) return false;
-        // Strict match: must contain ALL selected tag filters
         const hasAllTags = tagFilters.every(t => p.tags!.includes(t));
         if (!hasAllTags) return false;
       }
@@ -59,13 +62,23 @@ export default function ListScreen() {
     });
   }, [propertyContext?.properties, minPrice, maxPrice, minSize, maxSize, facingFilter, tagFilters, sectorFilter]);
 
-  if (!propertyContext) return <View><Text>Loading...</Text></View>;
-  const { deleteProperty, updateProperty } = propertyContext;
+  if (!propertyContext) return <View style={styles.loadingContainer}><Text style={styles.loadingText}>Loading...</Text></View>;
+  const { deleteProperty, updateProperty, loading } = propertyContext;
 
-  const handleDelete = (id: string) => {
-    Alert.alert("Delete", "Are you sure you want to delete this property?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteProperty(id) }
+  const handleDelete = async (id: number) => {
+    Alert.alert("DELETE", "Permanent removal of this property?", [
+      { text: "CANCEL", style: "cancel" },
+      { 
+        text: "DELETE", 
+        style: "destructive", 
+        onPress: async () => {
+          try {
+            await deleteProperty(id);
+          } catch (error: any) {
+            Alert.alert('Error', 'Failed to delete: ' + error.message);
+          }
+        } 
+      }
     ]);
   };
 
@@ -74,7 +87,7 @@ export default function ListScreen() {
     setEditForm({
       address: property.address,
       sector: property.sector,
-      size: property.size,
+      size: property.size.toString(),
       price: property.price,
       notes: property.notes || '',
       facing: property.facing || '',
@@ -83,256 +96,256 @@ export default function ListScreen() {
     });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingProperty) {
-      updateProperty({
-        id: editingProperty,
-        address: editForm.address.toUpperCase(),
-        sector: editForm.sector.toUpperCase(),
-        size: editForm.size.toUpperCase(),
-        price: editForm.price.toUpperCase(),
-        notes: editForm.notes.toUpperCase(),
-        facing: editForm.facing.toUpperCase(),
-        contact: editForm.contact,
-        tags: editForm.tags,
-      });
-      setEditingProperty(null);
+      try {
+        await updateProperty({
+          id: editingProperty,
+          address: editForm.address.toUpperCase(),
+          sector: editForm.sector.toUpperCase(),
+          size: editForm.size,
+          price: editForm.price.toUpperCase(),
+          notes: editForm.notes.toUpperCase(),
+          facing: editForm.facing.toUpperCase(),
+          contact: editForm.contact,
+          tags: editForm.tags,
+        });
+        setEditingProperty(null);
+      } catch (error: any) {
+        Alert.alert('Error', 'Failed to update: ' + error.message);
+      }
     }
   };
 
   const formatPrice = (p: string) => {
     const num = parseInt(p, 10);
     if (isNaN(num)) return p;
-    if (num >= 10000000) return `₹ ${Number((num / 10000000).toFixed(2))} Cr`;
-    if (num >= 100000) return `₹ ${Number((num / 100000).toFixed(2))} Lac`;
-    if (num >= 1000) return `₹ ${Number((num / 1000).toFixed(2))} K`;
+    if (num >= 10000000) return `₹ ${Number((num / 10000000).toFixed(2))} CR`;
+    if (num >= 100000) return `₹ ${Number((num / 100000).toFixed(2))} LAC`;
     return `₹ ${num}`;
   };
 
   const getFacingStyle = (facing: string) => {
     switch (facing) {
-      case 'NORTH': return { bg: '#DBEAFE', text: '#1E40AF' };
-      case 'SOUTH': return { bg: '#FEE2E2', text: '#991B1B' };
-      case 'EAST': return { bg: '#D1FAE5', text: '#065F46' };
-      case 'WEST': return { bg: '#FEF3C7', text: '#92400E' };
-      case 'NORTH-EAST':
-      case 'NORTH-WEST':
-      case 'SOUTH-EAST':
-      case 'SOUTH-WEST': return { bg: '#F3E8FF', text: '#6B21A8' };
-      default: return { bg: '#F1F5F9', text: '#475569' };
+      case 'NORTH': return { bg: '#F0F9FF', text: '#0369A1' };
+      case 'SOUTH': return { bg: '#FEF2F2', text: '#B91C1C' };
+      case 'EAST': return { bg: '#F0FDF4', text: '#15803D' };
+      case 'WEST': return { bg: '#FFFBEB', text: '#B45309' };
+      default: return { bg: '#F8FAFC', text: '#64748B' };
     }
   };
 
   const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity activeOpacity={0.7} style={[styles.card, isGridView ? styles.gridCard : styles.listCard]} onPress={() => setViewingProperty(item)}>
+    <TouchableOpacity 
+      activeOpacity={0.9} 
+      style={[styles.card, isGridView ? styles.gridCard : styles.listCard]} 
+      onPress={() => setViewingProperty(item)}
+    >
       <View style={styles.cardHeader}>
-        <Text style={styles.address} numberOfLines={isGridView ? 1 : undefined}>{item.address}</Text>
+        <Text style={styles.address} numberOfLines={1}>{item.address}</Text>
         <Text style={styles.price}>{formatPrice(item.price)}</Text>
       </View>
+
       <View style={styles.detailsContainer}>
-        <Text style={styles.details}>Sector: <Text style={styles.bold}>{item.sector}</Text></Text>
-        <Text style={styles.details}>Size: <Text style={styles.bold}>{item.size} sq m</Text></Text>
-        <View style={[styles.facingContainer, isGridView && { flexWrap: 'wrap' }]}>
-          <Text style={styles.details}>Facing: </Text>
-          <View style={[styles.facingBadge, { backgroundColor: getFacingStyle(item.facing).bg }, isGridView && { marginLeft: 0, marginTop: 4 }]}>
-            <Text style={[styles.facingBadgeText, { color: getFacingStyle(item.facing).text }]}>{item.facing}</Text>
-          </View>
+        <Text style={styles.details}><Text style={styles.bold}>SECTOR:</Text> {item.sector}</Text>
+        <Text style={styles.details}><Text style={styles.bold}>SIZE:</Text> {item.size}m²</Text>
+        <View style={styles.facingContainer}>
+            <Text style={styles.details}><Text style={styles.bold}>FACING:</Text></Text>
+            <View style={[styles.facingBadge, { backgroundColor: getFacingStyle(item.facing).bg }]}>
+                <Text style={[styles.facingBadgeText, { color: getFacingStyle(item.facing).text }]}>{item.facing}</Text>
+            </View>
         </View>
       </View>
-      {!isGridView && item.notes ? <Text style={styles.notes}>Notes: {item.notes}</Text> : null}
-      {item.tags && item.tags.length > 0 && (
-        <View style={styles.tagsContainer}>
-          {item.tags.map((t: string) => <View key={t} style={styles.tagLabel}><Text style={styles.tagLabelText}>{t}</Text></View>)}
-        </View>
-      )}
       
-      <View style={[styles.actions, isGridView && { flexDirection: 'column', gap: 8 }]}>
-        <TouchableOpacity style={[styles.editBtn, isGridView && { width: '100%' }]} onPress={() => openEdit(item)}>
-          <Text style={styles.editBtnText}>Edit</Text>
+      {item.tags && item.tags.length > 0 && (
+          <View style={styles.tagsContainer}>
+              {item.tags.map((tag: string) => (
+                  <View key={tag} style={styles.tagLabel}>
+                      <Text style={styles.tagLabelText}>{tag}</Text>
+                  </View>
+              ))}
+          </View>
+      )}
+
+      <View style={styles.actions}>
+        <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
+          <Text style={styles.editBtnText}>EDIT</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.deleteBtn, isGridView && { width: '100%' }]} onPress={() => handleDelete(item.id)}>
-          <Text style={styles.deleteBtnText}>Delete</Text>
+        <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id)}>
+          <Text style={styles.deleteBtnText}>DELETE</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
 
-  const renderFilters = () => (
-    <View style={styles.filtersContainer}>
-      <Text style={styles.filterTitle}>Filters</Text>
-      <View style={styles.filterRow}>
-        <TextInput style={styles.filterInput} placeholder="Min Price (₹)" keyboardType="numeric" value={minPrice} onChangeText={setMinPrice} />
-        <TextInput style={styles.filterInput} placeholder="Max Price (₹)" keyboardType="numeric" value={maxPrice} onChangeText={setMaxPrice} />
-      </View>
-      <View style={styles.filterRow}>
-        <TextInput style={styles.filterInput} placeholder="Min Size (sq m)" keyboardType="numeric" value={minSize} onChangeText={setMinSize} />
-        <TextInput style={styles.filterInput} placeholder="Max Size (sq m)" keyboardType="numeric" value={maxSize} onChangeText={setMaxSize} />
-      </View>
-      <TouchableOpacity style={styles.dropdownButton} onPress={() => setFacingDropdownOpen(true)}>
-        <Text style={styles.dropdownButtonText}>Facing: <Text style={styles.bold}>{facingFilter}</Text></Text>
-        <IconSymbol name="chevron.down" size={16} color="#475569" />
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.dropdownButton} onPress={() => setSectorDropdownOpen(true)}>
-        <Text style={styles.dropdownButtonText}>Sector: <Text style={styles.bold}>{sectorFilter}</Text></Text>
-        <IconSymbol name="chevron.down" size={16} color="#475569" />
-      </TouchableOpacity>
-      
-      <Text style={[styles.filterTitle, { marginTop: 16 }]}>Tags</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterTagsScroll}>
-        {AVAILABLE_TAGS.map((tag) => {
-          const isActive = tagFilters.includes(tag);
-          return (
-            <TouchableOpacity 
-              key={tag} 
-              style={[styles.tagPill, isActive && styles.tagPillActive]} 
-              onPress={() => setTagFilters(prev => isActive ? prev.filter(t => t !== tag) : [...prev, tag])}
-            >
-              <Text style={[styles.tagPillText, isActive && styles.tagPillTextActive]}>{tag}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Dashboard</Text>
+        <Text style={styles.title}>Properties</Text>
         <TouchableOpacity style={styles.toggleBtn} onPress={() => setIsGridView(!isGridView)}>
-          <IconSymbol name={isGridView ? "list.bullet" : "square.grid.2x2.fill"} size={24} color="#3B82F6" />
+            <IconSymbol name={isGridView ? "list.bullet" : "square.grid.2x2.fill"} size={24} color="#4F46E5" />
         </TouchableOpacity>
       </View>
 
       <FlatList
-        key={isGridView ? 'grid' : 'list'}
         data={filteredProperties}
-        keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        ListHeaderComponent={renderFilters()}
-        contentContainerStyle={styles.listContent}
+        keyExtractor={(item) => item.id.toString()}
         numColumns={isGridView ? 2 : 1}
-        ListEmptyComponent={<Text style={styles.emptyText}>No properties match your filters.</Text>}
+        key={isGridView ? 'grid' : 'list'}
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          <View style={styles.filtersContainer}>
+            <Text style={styles.filterTitle}>Price Range</Text>
+            <View style={styles.filterRow}>
+              <TextInput style={styles.filterInput} placeholder="Min Price" keyboardType="numeric" value={minPrice} onChangeText={setMinPrice} />
+              <TextInput style={styles.filterInput} placeholder="Max Price" keyboardType="numeric" value={maxPrice} onChangeText={setMaxPrice} />
+            </View>
+            
+            <Text style={styles.filterTitle}>Location & Facing</Text>
+            <View style={styles.filterRow}>
+                <TouchableOpacity style={[styles.dropdownButton, { width: '48%' }]} onPress={() => setSectorDropdownOpen(true)}>
+                    <Text style={styles.dropdownButtonText}>{sectorFilter}</Text>
+                    <IconSymbol name="chevron.down" size={20} color="#64748B" />
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.dropdownButton, { width: '48%' }]} onPress={() => setFacingDropdownOpen(true)}>
+                    <Text style={styles.dropdownButtonText}>{facingFilter}</Text>
+                    <IconSymbol name="chevron.down" size={20} color="#64748B" />
+                </TouchableOpacity>
+            </View>
+
+            <Text style={styles.filterTitle}>Features</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterTagsScroll}>
+                {AVAILABLE_TAGS.map((tag) => {
+                    const isActive = tagFilters.includes(tag);
+                    return (
+                        <TouchableOpacity 
+                            key={tag} 
+                            style={[styles.tagPill, isActive && styles.tagPillActive]} 
+                            onPress={() => setTagFilters(prev => isActive ? prev.filter(t => t !== tag) : [...prev, tag])}
+                        >
+                            <Text style={[styles.tagPillText, isActive && styles.tagPillTextActive]}>{tag}</Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </ScrollView>
+            
+            {tagFilters.length > 0 && (
+                <TouchableOpacity onPress={() => setTagFilters([])}>
+                    <Text style={{ color: '#EF4444', fontWeight: 'bold', marginTop: 8 }}>Clear all filters</Text>
+                </TouchableOpacity>
+            )}
+          </View>
+        }
+        ListEmptyComponent={<Text style={styles.emptyText}>No properties found matching filters.</Text>}
       />
 
-      <Modal visible={!!viewingProperty} animationType="slide" presentationStyle="pageSheet">
-        {viewingProperty && (
-          <SafeAreaView style={styles.modalContainer}>
-            <ScrollView contentContainerStyle={[styles.modalContent, { backgroundColor: '#F8FAFC' }]}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Property Details</Text>
-                <TouchableOpacity onPress={() => setViewingProperty(null)}>
-                  <Text style={[styles.modalCloseText, { color: '#4F46E5' }]}>Done</Text>
-                </TouchableOpacity>
-              </View>
-
-              <Text style={styles.viewAddress}>{viewingProperty.address}</Text>
-              <Text style={styles.viewPrice}>{formatPrice(viewingProperty.price)}</Text>
-              
-              <View style={styles.viewGrid}>
-                <View style={styles.viewGridItem}><Text style={styles.viewLabel}>Sector</Text><Text style={styles.viewValue}>{viewingProperty.sector}</Text></View>
-                <View style={styles.viewGridItem}><Text style={styles.viewLabel}>Size</Text><Text style={styles.viewValue}>{viewingProperty.size} sq m</Text></View>
-                <View style={styles.viewGridItem}>
-                  <Text style={styles.viewLabel}>Facing</Text>
-                  <View style={[styles.facingBadge, { backgroundColor: getFacingStyle(viewingProperty.facing).bg, marginTop: 4, alignSelf: 'flex-start', marginLeft: 0 }]}>
-                    <Text style={[styles.facingBadgeText, { color: getFacingStyle(viewingProperty.facing).text }]}>{viewingProperty.facing}</Text>
-                  </View>
-                </View>
-                <View style={styles.viewGridItem}>
-                  <Text style={styles.viewLabel}>Contact</Text>
-                  <Text style={styles.viewValue}>{viewingProperty.contact || 'N/A'}</Text>
-                </View>
-              </View>
-
-              {viewingProperty.tags && viewingProperty.tags.length > 0 && (
-                <View style={styles.viewSection}>
-                  <Text style={styles.viewLabel}>Tags</Text>
-                  <View style={styles.tagsContainer}>
-                    {viewingProperty.tags.map((t: string) => <View key={t} style={styles.tagLabel}><Text style={styles.tagLabelText}>{t}</Text></View>)}
-                  </View>
-                </View>
-              )}
-
-              {viewingProperty.notes ? (
-                <View style={styles.viewSection}>
-                  <Text style={styles.viewLabel}>Notes</Text>
-                  <Text style={styles.viewNotes}>{viewingProperty.notes}</Text>
-                </View>
-              ) : null}
-
-              <TouchableOpacity style={styles.closeBottomBtn} onPress={() => setViewingProperty(null)}>
-                <Text style={styles.closeBottomBtnText}>Close Details</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </SafeAreaView>
-        )}
-      </Modal>
-
-      <Modal visible={!!editingProperty} animationType="slide" presentationStyle="pageSheet">
+      {/* Edit Modal */}
+      <Modal visible={editingProperty !== null} animationType="slide">
         <SafeAreaView style={styles.modalContainer}>
           <ScrollView contentContainerStyle={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Property</Text>
+              <Text style={styles.modalTitle}>Edit Listing</Text>
               <TouchableOpacity onPress={() => setEditingProperty(null)}>
                 <Text style={styles.modalCloseText}>Cancel</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.formGroup}><Text style={styles.label}>Address</Text><TextInput style={styles.input} value={editForm.address} onChangeText={t => setEditForm({...editForm, address: t})} /></View>
-            <View style={styles.formGroup}><Text style={styles.label}>Sector</Text><TextInput style={styles.input} value={editForm.sector} onChangeText={t => setEditForm({...editForm, sector: t})} /></View>
-            <View style={styles.row}>
-              <View style={[styles.formGroup, styles.halfWidth]}><Text style={styles.label}>Size (sq m)</Text><TextInput style={styles.input} value={editForm.size} keyboardType="numeric" onChangeText={t => setEditForm({...editForm, size: t})} /></View>
-              <View style={[styles.formGroup, styles.halfWidth]}><Text style={styles.label}>Price (₹)</Text><TextInput style={styles.input} value={editForm.price} keyboardType="numeric" onChangeText={t => setEditForm({...editForm, price: t})} /></View>
-            </View>
-            <View style={styles.formGroup}><Text style={styles.label}>Facing</Text><TextInput style={styles.input} value={editForm.facing} onChangeText={t => setEditForm({...editForm, facing: t})} /></View>
-            <View style={styles.formGroup}><Text style={styles.label}>Contact Number</Text><TextInput style={styles.input} value={editForm.contact} keyboardType="phone-pad" onChangeText={t => setEditForm({...editForm, contact: t})} /></View>
+
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Tags</Text>
+              <Text style={styles.label}>Address</Text>
+              <TextInput style={styles.input} value={editForm.address} onChangeText={(text) => setEditForm({...editForm, address: text})} />
+            </View>
+
+            <View style={styles.row}>
+              <View style={[styles.formGroup, styles.halfWidth]}>
+                <Text style={styles.label}>Sector</Text>
+                <TextInput style={styles.input} value={editForm.sector} onChangeText={(text) => setEditForm({...editForm, sector: text})} />
+              </View>
+              <View style={[styles.formGroup, styles.halfWidth]}>
+                <Text style={styles.label}>Size (m²)</Text>
+                <TextInput style={styles.input} value={editForm.size} keyboardType="numeric" onChangeText={(text) => setEditForm({...editForm, size: text})} />
+              </View>
+            </View>
+
+            <View style={styles.row}>
+              <View style={[styles.formGroup, styles.halfWidth]}>
+                <Text style={styles.label}>Price (₹)</Text>
+                <TextInput style={styles.input} value={editForm.price} keyboardType="numeric" onChangeText={(text) => setEditForm({...editForm, price: text})} />
+              </View>
+              <View style={[styles.formGroup, styles.halfWidth]}>
+                <Text style={styles.label}>Facing</Text>
+                <TextInput style={styles.input} value={editForm.facing} onChangeText={(text) => setEditForm({...editForm, facing: text})} />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Contact</Text>
+              <TextInput style={styles.input} value={editForm.contact} onChangeText={(text) => setEditForm({...editForm, contact: text})} />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Available Tags</Text>
               <View style={styles.formTagsContainer}>
                 {AVAILABLE_TAGS.map((tag) => {
                   const isActive = editForm.tags.includes(tag);
                   return (
-                    <TouchableOpacity key={tag} style={[styles.tagPill, isActive && styles.tagPillActive]} onPress={() => setEditForm({...editForm, tags: isActive ? editForm.tags.filter(t => t !== tag) : [...editForm.tags, tag]})}>
+                    <TouchableOpacity 
+                      key={tag} 
+                      style={[styles.tagPill, isActive && styles.tagPillActive]} 
+                      onPress={() => {
+                        const newTags = isActive ? editForm.tags.filter(t => t !== tag) : [...editForm.tags, tag];
+                        setEditForm({...editForm, tags: newTags});
+                      }}
+                    >
                       <Text style={[styles.tagPillText, isActive && styles.tagPillTextActive]}>{tag}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
             </View>
-            <View style={styles.formGroup}><Text style={styles.label}>Notes</Text><TextInput style={[styles.input, styles.textArea]} value={editForm.notes} multiline numberOfLines={4} onChangeText={t => setEditForm({...editForm, notes: t})} /></View>
-            <TouchableOpacity style={styles.submitButton} onPress={handleSaveEdit}><Text style={styles.submitButtonText}>Save Changes</Text></TouchableOpacity>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Notes</Text>
+              <TextInput style={[styles.input, styles.textArea]} multiline numberOfLines={4} value={editForm.notes} onChangeText={(text) => setEditForm({...editForm, notes: text})} />
+            </View>
+
+            <TouchableOpacity style={styles.submitButton} onPress={handleSaveEdit}>
+              <Text style={styles.submitButtonText}>{loading ? 'Saving...' : 'Update Property'}</Text>
+            </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>
       </Modal>
-      
+
+      {/* Dropdowns */}
       <Modal visible={isFacingDropdownOpen} transparent animationType="fade">
-        <TouchableOpacity style={styles.dropdownOverlay} onPress={() => setFacingDropdownOpen(false)} activeOpacity={1}>
-          <View style={styles.dropdownContent}>
-            <Text style={styles.dropdownTitle}>Select Facing</Text>
-            <ScrollView>
-              {FACING_OPTIONS.map((f) => (
-                <TouchableOpacity key={f} style={styles.dropdownOption} onPress={() => { setFacingFilter(f); setFacingDropdownOpen(false); }}>
-                  <Text style={[styles.dropdownOptionText, facingFilter === f && styles.dropdownOptionTextActive]}>{f}</Text>
-                  {facingFilter === f && <IconSymbol name="checkmark" size={16} color="#4F46E5" />}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+        <TouchableOpacity style={styles.dropdownOverlay} activeOpacity={1} onPress={() => setFacingDropdownOpen(false)}>
+            <View style={styles.dropdownContent}>
+                <Text style={styles.dropdownTitle}>Select Facing</Text>
+                <ScrollView>
+                    {FACING_OPTIONS.map((f) => (
+                        <TouchableOpacity key={f} style={styles.dropdownOption} onPress={() => { setFacingFilter(f); setFacingDropdownOpen(false); }}>
+                            <Text style={[styles.dropdownOptionText, facingFilter === f && styles.dropdownOptionTextActive]}>{f}</Text>
+                            {facingFilter === f && <IconSymbol name="checkmark" size={20} color="#4F46E5" />}
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
         </TouchableOpacity>
       </Modal>
 
       <Modal visible={isSectorDropdownOpen} transparent animationType="fade">
-        <TouchableOpacity style={styles.dropdownOverlay} onPress={() => setSectorDropdownOpen(false)} activeOpacity={1}>
-          <View style={styles.dropdownContent}>
-            <Text style={styles.dropdownTitle}>Select Sector</Text>
-            <ScrollView>
-              {availableSectors.map((s) => (
-                <TouchableOpacity key={s} style={styles.dropdownOption} onPress={() => { setSectorFilter(s); setSectorDropdownOpen(false); }}>
-                  <Text style={[styles.dropdownOptionText, sectorFilter === s && styles.dropdownOptionTextActive]}>{s}</Text>
-                  {sectorFilter === s && <IconSymbol name="checkmark" size={16} color="#4F46E5" />}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+        <TouchableOpacity style={styles.dropdownOverlay} activeOpacity={1} onPress={() => setSectorDropdownOpen(false)}>
+            <View style={styles.dropdownContent}>
+                <Text style={styles.dropdownTitle}>Select Sector</Text>
+                <ScrollView>
+                    {availableSectors.map((s) => (
+                        <TouchableOpacity key={s} style={styles.dropdownOption} onPress={() => { setSectorFilter(s); setSectorDropdownOpen(false); }}>
+                            <Text style={[styles.dropdownOptionText, sectorFilter === s && styles.dropdownOptionTextActive]}>{s}</Text>
+                            {sectorFilter === s && <IconSymbol name="checkmark" size={20} color="#4F46E5" />}
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
         </TouchableOpacity>
       </Modal>
     </SafeAreaView>
@@ -343,14 +356,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 24, paddingTop: 80, paddingBottom: 24, backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
-    shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 2, zIndex: 10
+    paddingHorizontal: 24, paddingTop: Platform.OS === 'ios' ? 20 : 60, paddingBottom: 24, backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1, borderBottomColor: '#F1F5F9', zIndex: 10
   },
-  title: { fontSize: 36, fontWeight: '900', color: '#0F172A', letterSpacing: -0.75 },
+  title: { fontSize: 32, fontWeight: '900', color: '#0F172A', letterSpacing: -0.75 },
   toggleBtn: { padding: 12, backgroundColor: '#EEF2FF', borderRadius: 16 },
   filtersContainer: { marginBottom: 24, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24, shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.04, shadowRadius: 16, elevation: 3, borderWidth: 1, borderColor: '#F8FAFC' },
-  filterTitle: { fontSize: 12, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 },
+  filterTitle: { fontSize: 12, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, marginTop: 16 },
   filterRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   filterInput: {
     width: '48%', backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#F1F5F9', borderRadius: 16,
@@ -359,12 +371,12 @@ const styles = StyleSheet.create({
   dropdownButton: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#F1F5F9', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, marginTop: 4 },
   dropdownButtonText: { fontSize: 15, color: '#0F172A', fontWeight: '500' },
   dropdownOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.65)', justifyContent: 'flex-end', alignItems: 'center' },
-  dropdownContent: { width: '100%', backgroundColor: '#FFFFFF', borderTopLeftRadius: 36, borderTopRightRadius: 36, padding: 32, maxHeight: Dimensions.get('window').height * 0.6, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 30 },
+  dropdownContent: { width: '100%', backgroundColor: '#FFFFFF', borderTopLeftRadius: 36, borderTopRightRadius: 36, padding: 32, maxHeight: Dimensions.get('window').height * 0.6 },
   dropdownTitle: { fontSize: 24, fontWeight: '900', color: '#0F172A', marginBottom: 24, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   dropdownOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F8FAFC' },
   dropdownOptionText: { fontSize: 18, color: '#64748B', fontWeight: '500' },
   dropdownOptionTextActive: { color: '#4F46E5', fontWeight: '900' },
-  listContent: { padding: 24 },
+  listContent: { padding: 24, paddingBottom: 100 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, marginBottom: 24, shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 5, borderWidth: 1, borderColor: '#F8FAFC' },
   listCard: { width: '100%' },
   gridCard: { width: (Dimensions.get('window').width - 60) / 2, marginHorizontal: 6, padding: 12 },
@@ -377,15 +389,12 @@ const styles = StyleSheet.create({
   facingBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginLeft: 6 },
   facingBadgeText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
   bold: { fontWeight: '800', color: '#0F172A' },
-  notes: { fontSize: 14, color: '#64748B', fontStyle: 'italic', marginBottom: 16, lineHeight: 22 },
   actions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
   editBtn: { paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#EEF2FF', borderRadius: 14, width: '48%', alignItems: 'center' },
   editBtnText: { color: '#4F46E5', fontWeight: '800', fontSize: 14 },
   deleteBtn: { paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#FEF2F2', borderRadius: 14, width: '48%', alignItems: 'center' },
   deleteBtnText: { color: '#DC2626', fontWeight: '800', fontSize: 14 },
   emptyText: { textAlign: 'center', marginTop: 80, color: '#94A3B8', fontSize: 16, fontWeight: '600' },
-  
-  // Modal styles
   modalContainer: { flex: 1, backgroundColor: '#F8FAFC' },
   modalContent: { padding: 24, paddingBottom: 60, paddingTop: 40 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 },
@@ -395,27 +404,19 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   halfWidth: { width: '48%' },
   label: { fontSize: 12, fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, marginLeft: 4 },
-  input: { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#F1F5F9', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, fontSize: 16, color: '#0F172A', fontWeight: '500', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.02, shadowRadius: 10, elevation: 2 },
+  input: { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#F1F5F9', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, fontSize: 16, color: '#0F172A', fontWeight: '500' },
   textArea: { height: 130, paddingTop: 18, textAlignVertical: 'top' },
-  submitButton: { backgroundColor: '#4F46E5', borderRadius: 20, paddingVertical: 18, alignItems: 'center', marginTop: 24, shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 },
+  submitButton: { backgroundColor: '#4F46E5', borderRadius: 20, paddingVertical: 18, alignItems: 'center', marginTop: 24 },
   submitButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
   tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   tagLabel: { backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' },
   tagLabelText: { fontSize: 11, fontWeight: '800', color: '#475569', textTransform: 'uppercase' },
   formTagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
-  tagPill: { backgroundColor: '#FFFFFF', borderRadius: 24, paddingVertical: 10, paddingHorizontal: 18, borderWidth: 1.5, borderColor: '#F1F5F9', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 4, elevation: 1 },
-  tagPillActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5', shadowColor: '#4F46E5', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 4 } },
+  tagPill: { backgroundColor: '#FFFFFF', borderRadius: 24, paddingVertical: 10, paddingHorizontal: 18, borderWidth: 1.5, borderColor: '#F1F5F9' },
+  tagPillActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
   tagPillText: { fontSize: 13, fontWeight: '700', color: '#64748B', letterSpacing: 0.3 },
   tagPillTextActive: { color: '#FFFFFF' },
   filterTagsScroll: { gap: 10, paddingBottom: 8, marginTop: 4 },
-  viewAddress: { fontSize: 24, fontWeight: '900', color: '#0F172A', marginBottom: 8 },
-  viewPrice: { fontSize: 32, fontWeight: '900', color: '#047857', marginBottom: 32 },
-  viewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 32 },
-  viewGridItem: { width: '45%', backgroundColor: '#FFFFFF', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 4, elevation: 1 },
-  viewLabel: { fontSize: 12, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
-  viewValue: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
-  viewSection: { marginBottom: 32, backgroundColor: '#FFFFFF', padding: 20, borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9' },
-  viewNotes: { fontSize: 16, color: '#475569', lineHeight: 24 },
-  closeBottomBtn: { backgroundColor: '#F1F5F9', paddingVertical: 18, borderRadius: 20, alignItems: 'center', marginTop: 12 },
-  closeBottomBtnText: { color: '#0F172A', fontSize: 16, fontWeight: '800' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { fontSize: 16, color: '#4F46E5' },
 });

@@ -1,20 +1,15 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
+const tintColorLight = '#4F46E5';
 const tintColorDark = '#fff';
 
 export const Colors = {
   light: {
     text: '#11181C',
-    background: '#fff',
+    background: '#F8FAFC',
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    icon: '#64748B',
+    tabIconDefault: '#64748B',
     tabIconSelected: tintColorLight,
   },
   dark: {
@@ -27,15 +22,51 @@ export const Colors = {
   },
 };
 
+// Compatibility export for components expecting the old 'Theme' object
+export const Theme = {
+  colors: {
+    primary: '#4F46E5',
+    secondary: '#64748B',
+    accent: '#10B981',
+    background: '#F8FAFC',
+    surface: '#FFFFFF',
+    white: '#FFFFFF',
+    status: {
+      error: '#EF4444',
+      success: '#10B981',
+      warning: '#F59E0B'
+    }
+  },
+  shadows: {
+    light: {
+      shadowColor: '#4F46E5',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.05,
+      shadowRadius: 12,
+      elevation: 2
+    },
+    medium: {
+      shadowColor: '#4F46E5',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
+      elevation: 4
+    },
+    premium: {
+      shadowColor: '#4F46E5',
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.1,
+      shadowRadius: 20,
+      elevation: 6
+    }
+  }
+};
+
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {

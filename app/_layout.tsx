@@ -1,23 +1,31 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, Redirect, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
+import * as SplashScreen from 'expo-splash-screen';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '@/utils/supabase';
 import { PropertyProvider } from '@/context/PropertyContext';
 
+SplashScreen.preventAutoHideAsync();
+
 export const unstable_settings = {
-  anchor: '(tabs)',
+  initialRouteName: '(tabs)',
 };
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const segments = useSegments();
+  const router = useRouter();
 
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    SplashScreen.hideAsync();
+  }, []);
 
   useEffect(() => {
     // get current session
@@ -36,18 +44,19 @@ export default function RootLayout() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (loading) return;
+
+    const inAuthGroup = segments[0] === '(tabs)';
+
+    if (!session && inAuthGroup) {
+      router.replace('/login');
+    } else if (session && segments[0] === 'login') {
+      router.replace('/(tabs)');
+    }
+  }, [session, loading, segments]);
+
   if (loading) return null;
-
-  const inAuthGroup = segments[0] === '(tabs)';
-
-  // 🔐 Redirect based on auth state
-  if (!session && inAuthGroup) {
-    return <Redirect href="/login" />;
-  }
-  
-  if (session && segments[0] === 'login') {
-    return <Redirect href="/(tabs)" />;
-  }
 
   return (
     <PropertyProvider>
