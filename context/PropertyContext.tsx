@@ -79,9 +79,6 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
   const addProperty = async (property: Omit<Property, 'id' | 'created_at' | 'user_id'>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("token:", session?.access_token);
-      console.log("user_id:", user?.id);
       const { data, error } = await supabase
         .from('UserProperties')
         .insert([{

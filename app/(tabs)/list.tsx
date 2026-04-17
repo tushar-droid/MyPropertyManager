@@ -5,6 +5,7 @@ import { PropertyContext } from '@/context/PropertyContext';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import * as Clipboard from 'expo-clipboard';
 
 export default function ListScreen() {
   const propertyContext = useContext(PropertyContext);
@@ -19,6 +20,7 @@ export default function ListScreen() {
   const [facingFilter, setFacingFilter] = useState('ALL');
   const [isFacingDropdownOpen, setFacingDropdownOpen] = useState(false);
   const [tagFilters, setTagFilters] = useState<string[]>([]);
+  const [isTagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [sectorFilter, setSectorFilter] = useState('ALL');
   const [isSectorDropdownOpen, setSectorDropdownOpen] = useState(false);
 
@@ -28,8 +30,24 @@ export default function ListScreen() {
   const [viewingProperty, setViewingProperty] = useState<any>(null);
   const [editingProperty, setEditingProperty] = useState<any>(null);
   const [editForm, setEditForm] = useState<{address: string, sector: string, size: string, price: string, notes: string, facing: string, contact: string, tags: string[]}>({ address: '', sector: '', size: '', price: '', notes: '', facing: '', contact: '', tags: [] });
+  const [customTag, setCustomTag] = useState('');
 
-  const AVAILABLE_TAGS = ['PARK FACING', 'HIGHWAY FACING', 'CORNER', 'MAIN ROAD', 'GATED SOCIETY', 'BUILDER FLOOR'];
+  const DEFAULT_TAGS = ['PARK FACING', 'HIGHWAY FACING', 'CORNER', 'MAIN ROAD', 'GATED SOCIETY', 'BUILDER FLOOR'];
+
+  const availableTags = useMemo(() => {
+    if (!propertyContext) return DEFAULT_TAGS;
+    const allCustomTags = propertyContext.properties.flatMap(p => p.tags || []);
+    return Array.from(new Set([...DEFAULT_TAGS, ...allCustomTags, ...editForm.tags])).sort();
+  }, [propertyContext?.properties, editForm.tags]);
+
+  const handleAddCustomTag = () => {
+    if (!customTag.trim()) return;
+    const formattedTag = customTag.trim().toUpperCase();
+    if (!editForm.tags.includes(formattedTag)) {
+        setEditForm({...editForm, tags: [...editForm.tags, formattedTag]});
+    }
+    setCustomTag('');
+  };
 
   const availableSectors = useMemo(() => {
     if (!propertyContext) return ['ALL'];
@@ -88,7 +106,7 @@ export default function ListScreen() {
       address: property.address,
       sector: property.sector,
       size: property.size.toString(),
-      price: property.price,
+      price: property.price ? Number(property.price.toString().replace(/[^0-9]/g, '')).toLocaleString('en-IN') : '',
       notes: property.notes || '',
       facing: property.facing || '',
       contact: property.contact || '',
@@ -104,7 +122,7 @@ export default function ListScreen() {
           address: editForm.address.toUpperCase(),
           sector: editForm.sector.toUpperCase(),
           size: editForm.size,
-          price: editForm.price.toUpperCase(),
+          price: editForm.price.replace(/,/g, ''),
           notes: editForm.notes.toUpperCase(),
           facing: editForm.facing.toUpperCase(),
           contact: editForm.contact,
@@ -115,6 +133,16 @@ export default function ListScreen() {
         Alert.alert('Error', 'Failed to update: ' + error.message);
       }
     }
+  };
+
+  const handleEditPriceChange = (text: string) => {
+    const numericValue = text.replace(/[^0-9]/g, '');
+    if (!numericValue) {
+        setEditForm({...editForm, price: ''});
+        return;
+    }
+    const number = parseInt(numericValue, 10);
+    setEditForm({...editForm, price: number.toLocaleString('en-IN')});
   };
 
   const formatPrice = (p: string) => {
@@ -133,6 +161,21 @@ export default function ListScreen() {
       case 'WEST': return { bg: '#FFFBEB', text: '#B45309' };
       default: return { bg: '#F8FAFC', text: '#64748B' };
     }
+  };
+
+  const copyToClipboard = async (item?: any) => {
+    const p = item || viewingProperty;
+    if (!p) return;
+    const text = `🏠 Address: ${p.address}
+📍 Sector: ${p.sector}
+📏 Size: ${p.size} m²
+💎 Price: ${formatPrice(p.price)}
+🧭 Facing: ${p.facing}
+🏷️ Tags: ${(p.tags || []).join(', ')}
+📝 Notes: ${p.notes || 'None'}`;
+    
+    await Clipboard.setStringAsync(text);
+    Alert.alert('Copied!', 'Property details copied to clipboard.');
   };
 
   const renderItem = ({ item }: { item: any }) => (
@@ -171,8 +214,8 @@ export default function ListScreen() {
         <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
           <Text style={styles.editBtnText}>EDIT</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id)}>
-          <Text style={styles.deleteBtnText}>DELETE</Text>
+        <TouchableOpacity style={[styles.editBtn, { backgroundColor: '#F0FDF4' }]} onPress={() => copyToClipboard(item)}>
+          <Text style={[styles.editBtnText, { color: '#15803D' }]}>COPY DETAILS</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -215,20 +258,12 @@ export default function ListScreen() {
             </View>
 
             <Text style={styles.filterTitle}>Features</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterTagsScroll}>
-                {AVAILABLE_TAGS.map((tag) => {
-                    const isActive = tagFilters.includes(tag);
-                    return (
-                        <TouchableOpacity 
-                            key={tag} 
-                            style={[styles.tagPill, isActive && styles.tagPillActive]} 
-                            onPress={() => setTagFilters(prev => isActive ? prev.filter(t => t !== tag) : [...prev, tag])}
-                        >
-                            <Text style={[styles.tagPillText, isActive && styles.tagPillTextActive]}>{tag}</Text>
-                        </TouchableOpacity>
-                    );
-                })}
-            </ScrollView>
+            <TouchableOpacity style={[styles.dropdownButton, { marginBottom: 8 }]} onPress={() => setTagDropdownOpen(true)}>
+                <Text style={styles.dropdownButtonText}>
+                   {tagFilters.length === 0 ? "Select Tags" : `${tagFilters.length} Tags Selected`}
+                </Text>
+                <IconSymbol name="chevron.down" size={20} color="#64748B" />
+            </TouchableOpacity>
             
             {tagFilters.length > 0 && (
                 <TouchableOpacity onPress={() => setTagFilters([])}>
@@ -240,8 +275,89 @@ export default function ListScreen() {
         ListEmptyComponent={<Text style={styles.emptyText}>No properties found matching filters.</Text>}
       />
 
+      {/* Viewing Modal */}
+      <Modal 
+        visible={viewingProperty !== null} 
+        animationType="slide" 
+        presentationStyle="pageSheet"
+        onRequestClose={() => setViewingProperty(null)}
+        onDismiss={() => setViewingProperty(null)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <ScrollView contentContainerStyle={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Details</Text>
+              <TouchableOpacity onPress={() => { setViewingProperty(null); handleDelete(viewingProperty.id); }} style={{ padding: 8 }}>
+                 <IconSymbol name="trash" size={24} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+
+            {viewingProperty && (
+               <View>
+                  <Text style={styles.viewAddress}>{viewingProperty.address}</Text>
+                  <Text style={styles.viewPrice}>{formatPrice(viewingProperty.price)}</Text>
+                  
+                  <View style={styles.viewGrid}>
+                     <View style={styles.viewGridItem}>
+                         <Text style={styles.viewLabel}>Sector</Text>
+                         <Text style={styles.viewValue}>{viewingProperty.sector}</Text>
+                     </View>
+                     <View style={styles.viewGridItem}>
+                         <Text style={styles.viewLabel}>Size</Text>
+                         <Text style={styles.viewValue}>{viewingProperty.size} m²</Text>
+                     </View>
+                     <View style={styles.viewGridItem}>
+                         <Text style={styles.viewLabel}>Facing</Text>
+                         <Text style={styles.viewValue}>{viewingProperty.facing}</Text>
+                     </View>
+                  </View>
+
+                  {viewingProperty.tags && viewingProperty.tags.length > 0 && (
+                     <View style={styles.viewSection}>
+                         <Text style={styles.viewLabel}>Features</Text>
+                         <View style={styles.tagsContainer}>
+                             {viewingProperty.tags.map((tag: string) => (
+                                 <View key={tag} style={styles.tagLabel}>
+                                     <Text style={styles.tagLabelText}>{tag}</Text>
+                                 </View>
+                             ))}
+                         </View>
+                     </View>
+                  )}
+
+                  {viewingProperty.notes ? (
+                      <View style={styles.viewSection}>
+                          <Text style={styles.viewLabel}>Notes</Text>
+                          <Text style={styles.viewNotes}>{viewingProperty.notes}</Text>
+                      </View>
+                  ) : null}
+
+                  <View style={styles.actions}>
+                    <TouchableOpacity style={styles.editBtn} onPress={() => { setViewingProperty(null); openEdit(viewingProperty); }}>
+                      <Text style={styles.editBtnText}>EDIT</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.editBtn, { backgroundColor: '#F0FDF4' }]} onPress={() => copyToClipboard(viewingProperty)}>
+                      <Text style={[styles.editBtnText, { color: '#15803D' }]}>COPY DETAILS</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity style={styles.closeBottomBtn} onPress={() => setViewingProperty(null)}>
+                    <Text style={styles.closeBottomBtnText}>CLOSE</Text>
+                  </TouchableOpacity>
+               </View>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
       {/* Edit Modal */}
-      <Modal visible={editingProperty !== null} animationType="slide">
+      <Modal 
+        visible={editingProperty !== null} 
+        animationType="slide" 
+        presentationStyle="pageSheet"
+        onRequestClose={() => setEditingProperty(null)}
+        onDismiss={() => setEditingProperty(null)}
+      >
         <SafeAreaView style={styles.modalContainer}>
           <ScrollView contentContainerStyle={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -270,7 +386,7 @@ export default function ListScreen() {
             <View style={styles.row}>
               <View style={[styles.formGroup, styles.halfWidth]}>
                 <Text style={styles.label}>Price (₹)</Text>
-                <TextInput style={styles.input} value={editForm.price} keyboardType="numeric" onChangeText={(text) => setEditForm({...editForm, price: text})} />
+                <TextInput style={styles.input} value={editForm.price} keyboardType="numeric" onChangeText={handleEditPriceChange} />
               </View>
               <View style={[styles.formGroup, styles.halfWidth]}>
                 <Text style={styles.label}>Facing</Text>
@@ -280,13 +396,28 @@ export default function ListScreen() {
 
             <View style={styles.formGroup}>
               <Text style={styles.label}>Contact</Text>
-              <TextInput style={styles.input} value={editForm.contact} onChangeText={(text) => setEditForm({...editForm, contact: text})} />
+              <TextInput style={styles.input} value={editForm.contact} keyboardType="phone-pad" maxLength={10} onChangeText={(text) => setEditForm({...editForm, contact: text})} />
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Available Tags</Text>
+              <Text style={styles.label}>Tags / Features</Text>
+              
+              <View style={styles.customTagRow}>
+                  <TextInput 
+                      style={[styles.input, styles.customTagInput]} 
+                      value={customTag} 
+                      onChangeText={setCustomTag} 
+                      placeholder="Add custom..." 
+                      onSubmitEditing={handleAddCustomTag}
+                      returnKeyType="done"
+                  />
+                  <TouchableOpacity style={styles.addTagBtn} onPress={handleAddCustomTag}>
+                      <IconSymbol name="plus" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+              </View>
+
               <View style={styles.formTagsContainer}>
-                {AVAILABLE_TAGS.map((tag) => {
+                {availableTags.map((tag) => {
                   const isActive = editForm.tags.includes(tag);
                   return (
                     <TouchableOpacity 
@@ -344,6 +475,25 @@ export default function ListScreen() {
                             {sectorFilter === s && <IconSymbol name="checkmark" size={20} color="#4F46E5" />}
                         </TouchableOpacity>
                     ))}
+                </ScrollView>
+            </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <Modal visible={isTagDropdownOpen} transparent animationType="fade">
+        <TouchableOpacity style={styles.dropdownOverlay} activeOpacity={1} onPress={() => setTagDropdownOpen(false)}>
+            <View style={styles.dropdownContent}>
+                <Text style={styles.dropdownTitle}>Select Tags</Text>
+                <ScrollView>
+                    {availableTags.map((t) => {
+                        const isActive = tagFilters.includes(t);
+                        return (
+                          <TouchableOpacity key={t} style={styles.dropdownOption} onPress={() => setTagFilters(prev => isActive ? prev.filter(x => x !== t) : [...prev, t])}>
+                              <Text style={[styles.dropdownOptionText, isActive && styles.dropdownOptionTextActive]}>{t}</Text>
+                              {isActive && <IconSymbol name="checkmark" size={20} color="#4F46E5" />}
+                          </TouchableOpacity>
+                        );
+                    })}
                 </ScrollView>
             </View>
         </TouchableOpacity>
@@ -417,6 +567,19 @@ const styles = StyleSheet.create({
   tagPillText: { fontSize: 13, fontWeight: '700', color: '#64748B', letterSpacing: 0.3 },
   tagPillTextActive: { color: '#FFFFFF' },
   filterTagsScroll: { gap: 10, paddingBottom: 8, marginTop: 4 },
+  viewAddress: { fontSize: 24, fontWeight: '900', color: '#0F172A', marginBottom: 8 },
+  viewPrice: { fontSize: 32, fontWeight: '900', color: '#047857', marginBottom: 32 },
+  viewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 32 },
+  viewGridItem: { width: '45%', backgroundColor: '#FFFFFF', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#F1F5F9', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 4, elevation: 1 },
+  viewLabel: { fontSize: 12, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+  viewValue: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
+  viewSection: { marginBottom: 32, backgroundColor: '#FFFFFF', padding: 20, borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9' },
+  viewNotes: { fontSize: 16, color: '#475569', lineHeight: 24 },
+  customTagRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },
+  customTagInput: { flex: 1, paddingVertical: 14 },
+  addTagBtn: { backgroundColor: '#4F46E5', borderRadius: 16, width: 54, justifyContent: 'center', alignItems: 'center' },
+  closeBottomBtn: { backgroundColor: '#F1F5F9', paddingVertical: 18, borderRadius: 20, alignItems: 'center', marginTop: 16 },
+  closeBottomBtnText: { color: '#0F172A', fontSize: 16, fontWeight: '800' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { fontSize: 16, color: '#4F46E5' },
 });

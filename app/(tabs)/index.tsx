@@ -1,7 +1,8 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useMemo } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PropertyContext } from '@/context/PropertyContext';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function AddProperty() {
   const propertyContext = useContext(PropertyContext);
@@ -14,9 +15,34 @@ export default function AddProperty() {
   const [facing, setFacing] = useState('');
   const [contact, setContact] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [customTag, setCustomTag] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const AVAILABLE_TAGS = ['PARK FACING', 'HIGHWAY FACING', 'CORNER', 'MAIN ROAD', 'GATED SOCIETY', 'BUILDER FLOOR'];
+  const DEFAULT_TAGS = ['PARK FACING', 'HIGHWAY FACING', 'CORNER', 'MAIN ROAD', 'GATED SOCIETY', 'BUILDER FLOOR'];
+
+  const availableTags = useMemo(() => {
+    const allCustomTags = propertyContext?.properties.flatMap(p => p.tags || []) || [];
+    return Array.from(new Set([...DEFAULT_TAGS, ...allCustomTags, ...tags])).sort();
+  }, [propertyContext?.properties, tags]);
+
+  const handleAddCustomTag = () => {
+    if (!customTag.trim()) return;
+    const formattedTag = customTag.trim().toUpperCase();
+    if (!tags.includes(formattedTag)) {
+        setTags([...tags, formattedTag]);
+    }
+    setCustomTag('');
+  };
+
+  const handlePriceChange = (text: string) => {
+    const numericValue = text.replace(/[^0-9]/g, '');
+    if (!numericValue) {
+        setPrice('');
+        return;
+    }
+    const number = parseInt(numericValue, 10);
+    setPrice(number.toLocaleString('en-IN'));
+  };
 
   const handleAddProperty = async () => {
     if (!address || !sector || !size || !price) {
@@ -30,7 +56,7 @@ export default function AddProperty() {
         address: address.toUpperCase(),
         sector: sector.toUpperCase(),
         size,
-        price,
+        price: price.replace(/,/g, ''),
         notes: notes.toUpperCase(),
         facing: facing.toUpperCase(),
         contact,
@@ -86,7 +112,7 @@ export default function AddProperty() {
             <View style={styles.row}>
               <View style={[styles.inputGroup, { width: '48%' }]}>
                 <Text style={styles.label}>Price (₹)</Text>
-                <TextInput style={styles.input} value={price} onChangeText={setPrice} placeholder="Amount" keyboardType="numeric" />
+                <TextInput style={styles.input} value={price} onChangeText={handlePriceChange} placeholder="Amount" keyboardType="numeric" />
               </View>
               <View style={[styles.inputGroup, { width: '48%' }]}>
                 <Text style={styles.label}>Facing</Text>
@@ -96,13 +122,28 @@ export default function AddProperty() {
 
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Contact</Text>
-                <TextInput style={styles.input} value={contact} onChangeText={setContact} placeholder="Owner name or number" keyboardType="phone-pad" />
+                <TextInput style={styles.input} value={contact} onChangeText={setContact} placeholder="Owner number" keyboardType="phone-pad" maxLength={10} />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Tags / Features</Text>
+              
+              <View style={styles.customTagRow}>
+                  <TextInput 
+                      style={[styles.input, styles.customTagInput]} 
+                      value={customTag} 
+                      onChangeText={setCustomTag} 
+                      placeholder="Add custom..." 
+                      onSubmitEditing={handleAddCustomTag}
+                      returnKeyType="done"
+                  />
+                  <TouchableOpacity style={styles.addTagBtn} onPress={handleAddCustomTag}>
+                      <IconSymbol name="plus" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+              </View>
+
               <View style={styles.tagContainer}>
-                {AVAILABLE_TAGS.map((tag) => {
+                {availableTags.map((tag) => {
                   const isActive = tags.includes(tag);
                   return (
                     <TouchableOpacity 
@@ -153,6 +194,9 @@ const styles = StyleSheet.create({
   },
   textArea: { height: 120, textAlignVertical: 'top' },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
+  customTagRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },
+  customTagInput: { flex: 1, paddingVertical: 14 },
+  addTagBtn: { backgroundColor: '#4F46E5', borderRadius: 16, width: 54, justifyContent: 'center', alignItems: 'center' },
   tagContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
   tagPill: { backgroundColor: '#FFFFFF', borderRadius: 24, paddingVertical: 10, paddingHorizontal: 16, borderWidth: 1.5, borderColor: '#F1F5F9' },
   tagPillActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },

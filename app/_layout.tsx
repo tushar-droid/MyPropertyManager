@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Linking from 'expo-linking';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '@/utils/supabase';
@@ -22,6 +23,38 @@ export default function RootLayout() {
 
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isRecovery, setIsRecovery] = useState(false);
+
+  useEffect(() => {
+    const handleUrl = (url: string | null) => {
+      if (!url) return;
+      if (url.includes('access_token')) {
+          const urlStr = url.replace('#', '?');
+          const parsedUrl = new URL(urlStr);
+          const accessToken = parsedUrl.searchParams.get('access_token');
+          const refreshToken = parsedUrl.searchParams.get('refresh_token');
+          const type = parsedUrl.searchParams.get('type');
+
+          if (accessToken && refreshToken) {
+              if (type === 'recovery') {
+                  setIsRecovery(true);
+              }
+              supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: refreshToken,
+              }).then(() => {
+                  if (type === 'recovery') {
+                      setTimeout(() => router.replace('/reset-password'), 100);
+                  }
+              });
+          }
+      }
+    };
+
+    Linking.getInitialURL().then(handleUrl);
+    const sub = Linking.addEventListener('url', (e) => handleUrl(e.url));
+    return () => sub.remove();
+  }, [router]);
 
   useEffect(() => {
     SplashScreen.hideAsync();
@@ -52,9 +85,11 @@ export default function RootLayout() {
     if (!session && inAuthGroup) {
       router.replace('/login');
     } else if (session && segments[0] === 'login') {
-      router.replace('/(tabs)');
+      if (!isRecovery) {
+        router.replace('/(tabs)');
+      }
     }
-  }, [session, loading, segments]);
+  }, [session, loading, segments, isRecovery]);
 
   if (loading) return null;
 
@@ -74,18 +109,24 @@ export default function RootLayout() {
             }} 
           />
           <Stack.Screen 
+            name="reset-password" 
+            options={{ 
+               headerShown: false,
+               animation: 'slide_from_bottom',
+            }} 
+          />
+          <Stack.Screen 
+            name="update-password" 
+            options={{ 
+               headerShown: false,
+               animation: 'slide_from_right',
+            }} 
+          />
+          <Stack.Screen 
             name="(tabs)" 
             options={{ 
               headerShown: false,
               animation: 'fade',
-            }} 
-          />
-          <Stack.Screen 
-            name="modal" 
-            options={{ 
-              presentation: 'modal', 
-              title: 'Modal', 
-              headerShown: true 
             }} 
           />
         </Stack>

@@ -1,38 +1,61 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '@/utils/supabase';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { supabase } from '@/utils/supabase';
+import React from 'react';
+import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const handleLogout = async () => {
-    Alert.alert(
-      "Confirm Logout",
-      "Are you sure you want to log out of your account?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
-          style: "destructive", 
-          onPress: async () => {
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-              Alert.alert('Error', error.message);
-            }
-          } 
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm("Are you sure you want to log out of your account?");
+      if (confirmed) {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          window.alert(error.message);
         }
-      ]
-    );
+      }
+    } else {
+      Alert.alert(
+        "Confirm Logout",
+        "Are you sure you want to log out of your account?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Logout",
+            style: "destructive",
+            onPress: async () => {
+              const { error } = await supabase.auth.signOut();
+              if (error) {
+                Alert.alert('Error', error.message);
+              }
+            }
+          }
+        ]
+      );
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Settings</Text>
-        
+
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Account</Text>
           <View style={styles.card}>
+            <TouchableOpacity style={[styles.settingItem, { borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }]} onPress={() => router.push('/update-password')}>
+              <View style={[styles.iconContainer, { backgroundColor: '#EEF2FF' }]}>
+                <IconSymbol name="lock.fill" size={20} color="#4F46E5" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={styles.settingLabel}>Update Password</Text>
+                <Text style={styles.settingSublabel}>Change your current password</Text>
+              </View>
+              <IconSymbol name="chevron.right" size={16} color="#CBD5E1" />
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.settingItem} onPress={handleLogout}>
               <View style={[styles.iconContainer, { backgroundColor: '#FEE2E2' }]}>
                 <IconSymbol name="list.bullet" size={20} color="#DC2626" />
@@ -62,8 +85,7 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.footer}>
-            <Text style={styles.footerText}>My Property Manager</Text>
-            <Text style={styles.footerSubtext}>Surgical Theme Revert Completed</Text>
+          <Text style={styles.footerText}>My Property Manager</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

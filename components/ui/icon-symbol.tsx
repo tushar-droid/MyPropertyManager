@@ -25,6 +25,9 @@ const MAPPING = {
   'checkmark': 'check',
   'gearshape.fill': 'settings',
   'arrow.clockwise': 'refresh',
+  'plus': 'add',
+  'lock.fill': 'lock',
+  'chevron.left': 'chevron-left',
 } as IconMapping;
 
 /**
