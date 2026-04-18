@@ -28,6 +28,7 @@ const MAPPING = {
   'plus': 'add',
   'lock.fill': 'lock',
   'chevron.left': 'chevron-left',
+  'trash': 'delete',
 } as IconMapping;
 
 /**

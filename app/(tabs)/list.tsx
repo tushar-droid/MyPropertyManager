@@ -174,7 +174,6 @@ export default function ListScreen() {
 💎 Price: ${formatPrice(p.price)}
 🧭 Facing: ${p.facing}
 👤 Owner: ${p.owner_name || 'N/A'}
-📞 Contact: ${p.contact || 'N/A'}
 🏷️ Tags: ${(p.tags || []).join(', ')}
 📝 Notes: ${p.notes || 'None'}`;
     
