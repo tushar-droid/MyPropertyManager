@@ -7,17 +7,11 @@ import {
     TextInput, 
     TouchableOpacity, 
     View, 
-    Dimensions, 
     KeyboardAvoidingView, 
     Platform,
     ActivityIndicator 
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-const { width, height } = Dimensions.get('window');
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -25,7 +19,6 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<'login' | 'signup'>('login');
     const [errorMsg, setErrorMsg] = useState('');
-    const colorScheme = useColorScheme();
 
     async function handleAuth() {
         setErrorMsg('');
@@ -80,17 +73,11 @@ export default function Login() {
         }
     };
 
-    const tint = Colors[colorScheme ?? 'light'].tint;
-
     return (
         <KeyboardAvoidingView 
             style={styles.container} 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <LinearGradient
-                colors={[tint, '#2D4A85', '#64748B']}
-                style={styles.background}
-            />
             
             <View style={styles.content}>
                 <View style={styles.header}>
@@ -142,7 +129,7 @@ export default function Login() {
                             disabled={loading}
                         >
                             {loading ? (
-                                <ActivityIndicator color={tint} />
+                                <ActivityIndicator color="#4F46E5" />
                             ) : (
                                 <Text style={styles.mainButtonText}>
                                     {mode === 'login' ? 'SIGN IN' : 'GET STARTED'}
@@ -178,13 +165,7 @@ export default function Login() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    background: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
+        backgroundColor: '#4F46E5',
     },
     content: {
         flex: 1,
