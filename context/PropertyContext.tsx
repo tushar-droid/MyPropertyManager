@@ -11,6 +11,7 @@ export interface Property {
   notes: string;
   facing: string;
   contact: string;
+  owner_name?: string;
   tags?: string[];
   created_at?: string;
   user_id?: string;
@@ -89,6 +90,7 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
           notes: property.notes.toUpperCase(),
           facing: property.facing.toUpperCase(),
           contact: property.contact,
+          owner_name: property.owner_name || '',
           tags: property.tags || [],
           user_id: user?.id,
         }])
@@ -148,6 +150,7 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
           notes: updated.notes.toUpperCase(),
           facing: updated.facing.toUpperCase(),
           contact: updated.contact,
+          owner_name: updated.owner_name || '',
           tags: updated.tags,
         })
         .eq('id', updated.id)

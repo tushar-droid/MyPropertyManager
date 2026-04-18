@@ -14,6 +14,7 @@ export default function AddProperty() {
   const [notes, setNotes] = useState('');
   const [facing, setFacing] = useState('');
   const [contact, setContact] = useState('');
+  const [ownerName, setOwnerName] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState('');
   const [loading, setLoading] = useState(false);
@@ -60,6 +61,7 @@ export default function AddProperty() {
         notes: notes.toUpperCase(),
         facing: facing.toUpperCase(),
         contact,
+        owner_name: ownerName,
         tags
       });
       // Reset form
@@ -70,6 +72,7 @@ export default function AddProperty() {
       setNotes('');
       setFacing('');
       setContact('');
+      setOwnerName('');
       setTags([]);
       Alert.alert('Success', 'Property added successfully');
     } catch (error: any) {
@@ -123,6 +126,11 @@ export default function AddProperty() {
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Contact</Text>
                 <TextInput style={styles.input} value={contact} onChangeText={setContact} placeholder="Owner number" keyboardType="phone-pad" maxLength={10} />
+            </View>
+
+            <View style={styles.inputGroup}>
+                <Text style={styles.label}>Owner Name</Text>
+                <TextInput style={styles.input} value={ownerName} onChangeText={setOwnerName} placeholder="Enter owner name" />
             </View>
 
             <View style={styles.inputGroup}>

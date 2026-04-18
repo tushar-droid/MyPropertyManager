@@ -29,7 +29,7 @@ export default function ListScreen() {
   // Modals State
   const [viewingProperty, setViewingProperty] = useState<any>(null);
   const [editingProperty, setEditingProperty] = useState<any>(null);
-  const [editForm, setEditForm] = useState<{address: string, sector: string, size: string, price: string, notes: string, facing: string, contact: string, tags: string[]}>({ address: '', sector: '', size: '', price: '', notes: '', facing: '', contact: '', tags: [] });
+  const [editForm, setEditForm] = useState<{address: string, sector: string, size: string, price: string, notes: string, facing: string, contact: string, owner_name: string, tags: string[]}>({ address: '', sector: '', size: '', price: '', notes: '', facing: '', contact: '', owner_name: '', tags: [] });
   const [customTag, setCustomTag] = useState('');
 
   const DEFAULT_TAGS = ['PARK FACING', 'HIGHWAY FACING', 'CORNER', 'MAIN ROAD', 'GATED SOCIETY', 'BUILDER FLOOR'];
@@ -110,6 +110,7 @@ export default function ListScreen() {
       notes: property.notes || '',
       facing: property.facing || '',
       contact: property.contact || '',
+      owner_name: property.owner_name || '',
       tags: property.tags || []
     });
   };
@@ -126,6 +127,7 @@ export default function ListScreen() {
           notes: editForm.notes.toUpperCase(),
           facing: editForm.facing.toUpperCase(),
           contact: editForm.contact,
+          owner_name: editForm.owner_name,
           tags: editForm.tags,
         });
         setEditingProperty(null);
@@ -171,6 +173,8 @@ export default function ListScreen() {
 📏 Size: ${p.size} m²
 💎 Price: ${formatPrice(p.price)}
 🧭 Facing: ${p.facing}
+👤 Owner: ${p.owner_name || 'N/A'}
+📞 Contact: ${p.contact || 'N/A'}
 🏷️ Tags: ${(p.tags || []).join(', ')}
 📝 Notes: ${p.notes || 'None'}`;
     
@@ -192,6 +196,9 @@ export default function ListScreen() {
       <View style={styles.detailsContainer}>
         <Text style={styles.details}><Text style={styles.bold}>SECTOR:</Text> {item.sector}</Text>
         <Text style={styles.details}><Text style={styles.bold}>SIZE:</Text> {item.size}m²</Text>
+        {item.owner_name ? (
+          <Text style={styles.details}><Text style={styles.bold}>OWNER:</Text> {item.owner_name}</Text>
+        ) : null}
         <View style={styles.facingContainer}>
             <Text style={styles.details}><Text style={styles.bold}>FACING:</Text></Text>
             <View style={[styles.facingBadge, { backgroundColor: getFacingStyle(item.facing).bg }]}>
@@ -310,6 +317,12 @@ export default function ListScreen() {
                          <Text style={styles.viewLabel}>Facing</Text>
                          <Text style={styles.viewValue}>{viewingProperty.facing}</Text>
                      </View>
+                     {viewingProperty.owner_name ? (
+                       <View style={styles.viewGridItem}>
+                           <Text style={styles.viewLabel}>Owner</Text>
+                           <Text style={styles.viewValue}>{viewingProperty.owner_name}</Text>
+                       </View>
+                     ) : null}
                   </View>
 
                   {viewingProperty.tags && viewingProperty.tags.length > 0 && (
@@ -397,6 +410,11 @@ export default function ListScreen() {
             <View style={styles.formGroup}>
               <Text style={styles.label}>Contact</Text>
               <TextInput style={styles.input} value={editForm.contact} keyboardType="phone-pad" maxLength={10} onChangeText={(text) => setEditForm({...editForm, contact: text})} />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Owner Name</Text>
+              <TextInput style={styles.input} value={editForm.owner_name} placeholder="Enter owner name" onChangeText={(text) => setEditForm({...editForm, owner_name: text})} />
             </View>
 
             <View style={styles.formGroup}>
