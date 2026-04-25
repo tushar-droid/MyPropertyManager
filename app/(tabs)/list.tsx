@@ -1,18 +1,19 @@
 import React, { useContext, useState, useMemo } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, Modal, Alert, ScrollView, Dimensions, Platform } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, Modal, Alert, ScrollView, Dimensions, Platform, Linking } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PropertyContext } from '@/context/PropertyContext';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import * as Clipboard from 'expo-clipboard';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 export default function ListScreen() {
   const propertyContext = useContext(PropertyContext);
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
 
-  const [isGridView, setIsGridView] = useState(false);
+
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [minSize, setMinSize] = useState('');
@@ -29,6 +30,7 @@ export default function ListScreen() {
   // Modals State
   const [viewingProperty, setViewingProperty] = useState<any>(null);
   const [editingProperty, setEditingProperty] = useState<any>(null);
+  const [isEditFacingDropdownOpen, setEditFacingDropdownOpen] = useState(false);
   const [editForm, setEditForm] = useState<{address: string, sector: string, size: string, price: string, notes: string, facing: string, contact: string, owner_name: string, tags: string[]}>({ address: '', sector: '', size: '', price: '', notes: '', facing: '', contact: '', owner_name: '', tags: [] });
   const [customTag, setCustomTag] = useState('');
 
@@ -49,6 +51,18 @@ export default function ListScreen() {
     setCustomTag('');
   };
 
+  const handleMinPriceChange = (text: string) => {
+    const numericValue = text.replace(/[^0-9]/g, '');
+    if (!numericValue) { setMinPrice(''); return; }
+    setMinPrice(parseInt(numericValue, 10).toLocaleString('en-IN'));
+  };
+
+  const handleMaxPriceChange = (text: string) => {
+    const numericValue = text.replace(/[^0-9]/g, '');
+    if (!numericValue) { setMaxPrice(''); return; }
+    setMaxPrice(parseInt(numericValue, 10).toLocaleString('en-IN'));
+  };
+
   const availableSectors = useMemo(() => {
     if (!propertyContext) return ['ALL'];
     const { properties } = propertyContext;
@@ -63,10 +77,15 @@ export default function ListScreen() {
       const pPrice = parseFloat(p.price);
       const pSize = parseFloat(p.size);
 
-      if (minPrice && !isNaN(parseFloat(minPrice)) && pPrice < parseFloat(minPrice)) return false;
-      if (maxPrice && !isNaN(parseFloat(maxPrice)) && pPrice > parseFloat(maxPrice)) return false;
-      if (minSize && !isNaN(parseFloat(minSize)) && pSize < parseFloat(minSize)) return false;
-      if (maxSize && !isNaN(parseFloat(maxSize)) && pSize > parseFloat(maxSize)) return false;
+      const parsedMinPrice = parseFloat(minPrice.replace(/,/g, ''));
+      const parsedMaxPrice = parseFloat(maxPrice.replace(/,/g, ''));
+      const parsedMinSize = parseFloat(minSize.replace(/,/g, ''));
+      const parsedMaxSize = parseFloat(maxSize.replace(/,/g, ''));
+
+      if (minPrice && !isNaN(parsedMinPrice) && pPrice < parsedMinPrice) return false;
+      if (maxPrice && !isNaN(parsedMaxPrice) && pPrice > parsedMaxPrice) return false;
+      if (minSize && !isNaN(parsedMinSize) && pSize < parsedMinSize) return false;
+      if (maxSize && !isNaN(parsedMaxSize) && pSize > parsedMaxSize) return false;
       if (facingFilter !== 'ALL' && p.facing !== facingFilter) return false;
       if (sectorFilter !== 'ALL' && p.sector !== sectorFilter) return false;
       
@@ -161,6 +180,10 @@ export default function ListScreen() {
       case 'SOUTH': return { bg: '#FEF2F2', text: '#B91C1C' };
       case 'EAST': return { bg: '#F0FDF4', text: '#15803D' };
       case 'WEST': return { bg: '#FFFBEB', text: '#B45309' };
+      case 'NORTH-EAST': return { bg: '#FAF5FF', text: '#7E22CE' };
+      case 'NORTH-WEST': return { bg: '#EEF2FF', text: '#4338CA' };
+      case 'SOUTH-EAST': return { bg: '#FDF2F8', text: '#BE185D' };
+      case 'SOUTH-WEST': return { bg: '#F0FDFA', text: '#0F766E' };
       default: return { bg: '#F8FAFC', text: '#64748B' };
     }
   };
@@ -168,8 +191,8 @@ export default function ListScreen() {
   const copyToClipboard = async (item?: any) => {
     const p = item || viewingProperty;
     if (!p) return;
-    const text = `🏠 Address: ${p.address}
-📍 Sector: ${p.sector}
+    const text = `📍 Sector: ${p.sector}
+🏠 Address: ${p.address}
 📏 Size: ${p.size} m²
 💎 Price: ${formatPrice(p.price)}
 🧭 Facing: ${p.facing}
@@ -182,73 +205,95 @@ export default function ListScreen() {
   };
 
   const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      activeOpacity={0.9} 
-      style={[styles.card, isGridView ? styles.gridCard : styles.listCard]} 
-      onPress={() => setViewingProperty(item)}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={styles.address} numberOfLines={1}>{item.address}</Text>
-        <Text style={styles.price}>{formatPrice(item.price)}</Text>
-      </View>
-
-      <View style={styles.detailsContainer}>
-        <Text style={styles.details}><Text style={styles.bold}>SECTOR:</Text> {item.sector}</Text>
-        <Text style={styles.details}><Text style={styles.bold}>SIZE:</Text> {item.size}m²</Text>
-        {item.owner_name ? (
-          <Text style={styles.details}><Text style={styles.bold}>OWNER:</Text> {item.owner_name}</Text>
-        ) : null}
-        <View style={styles.facingContainer}>
-            <Text style={styles.details}><Text style={styles.bold}>FACING:</Text></Text>
-            <View style={[styles.facingBadge, { backgroundColor: getFacingStyle(item.facing).bg }]}>
-                <Text style={[styles.facingBadgeText, { color: getFacingStyle(item.facing).text }]}>{item.facing}</Text>
-            </View>
-        </View>
-      </View>
-      
-      {item.tags && item.tags.length > 0 && (
-          <View style={styles.tagsContainer}>
-              {item.tags.map((tag: string) => (
-                  <View key={tag} style={styles.tagLabel}>
-                      <Text style={styles.tagLabelText}>{tag}</Text>
-                  </View>
-              ))}
+    <View style={styles.swipeContainerList}>
+      <Swipeable
+        containerStyle={{ flex: 1, borderRadius: 24 }}
+        renderLeftActions={() => {
+          if (!item.contact) return null;
+          return (
+            <TouchableOpacity 
+              style={styles.swipeActionBtn} 
+              onPress={() => Linking.openURL(`tel:${item.contact}`)}
+            >
+              <IconSymbol name="phone.fill" size={32} color="#FFFFFF" />
+              <Text style={styles.swipeActionText}>CALL</Text>
+            </TouchableOpacity>
+          );
+        }}
+      >
+        <TouchableOpacity 
+          activeOpacity={1} 
+          style={styles.card} 
+          onPress={() => setViewingProperty(item)}
+        >
+          <View style={styles.cardHeader}>
+            <Text style={styles.address} numberOfLines={1}>{item.sector}</Text>
+            <Text style={styles.price}>{formatPrice(item.price)}</Text>
           </View>
-      )}
 
-      <View style={styles.actions}>
-        <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
-          <Text style={styles.editBtnText}>EDIT</Text>
+          <View style={styles.detailsContainer}>
+            <Text style={styles.details}><Text style={styles.bold}>ADDRESS:</Text> {item.address}</Text>
+            <Text style={styles.details}><Text style={styles.bold}>SIZE:</Text> {item.size}m²</Text>
+            {item.owner_name ? (
+              <Text style={styles.details}><Text style={styles.bold}>OWNER:</Text> {item.owner_name}</Text>
+            ) : null}
+            {item.contact ? (
+              <Text style={styles.details}><Text style={styles.bold}>PHONE:</Text> {item.contact}</Text>
+            ) : null}
+            <View style={styles.facingContainer}>
+                <Text style={styles.details}><Text style={styles.bold}>FACING:</Text></Text>
+                <View style={[styles.facingBadge, { backgroundColor: getFacingStyle(item.facing).bg, marginLeft: 6 }]}>
+                    <Text style={[styles.facingBadgeText, { color: getFacingStyle(item.facing).text }]}>{item.facing}</Text>
+                </View>
+            </View>
+          </View>
+          
+          {item.tags && item.tags.length > 0 && (
+              <View style={styles.tagsContainer}>
+                  {item.tags.map((tag: string) => (
+                      <View key={tag} style={styles.tagLabel}>
+                          <Text style={styles.tagLabelText}>{tag}</Text>
+                      </View>
+                  ))}
+              </View>
+          )}
+
+          <View style={styles.actions}>
+            <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
+              <Text style={styles.editBtnText}>EDIT</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.editBtn, { backgroundColor: '#F0FDF4' }]} onPress={() => copyToClipboard(item)}>
+              <Text style={[styles.editBtnText, { color: '#15803D' }]}>COPY DETAILS</Text>
+            </TouchableOpacity>
+          </View>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.editBtn, { backgroundColor: '#F0FDF4' }]} onPress={() => copyToClipboard(item)}>
-          <Text style={[styles.editBtnText, { color: '#15803D' }]}>COPY DETAILS</Text>
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+      </Swipeable>
+    </View>
   );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Properties</Text>
-        <TouchableOpacity style={styles.toggleBtn} onPress={() => setIsGridView(!isGridView)}>
-            <IconSymbol name={isGridView ? "list.bullet" : "square.grid.2x2.fill"} size={24} color="#4F46E5" />
-        </TouchableOpacity>
       </View>
 
       <FlatList
         data={filteredProperties}
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
-        numColumns={isGridView ? 2 : 1}
-        key={isGridView ? 'grid' : 'list'}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View style={styles.filtersContainer}>
-            <Text style={styles.filterTitle}>Price Range</Text>
+            <Text style={styles.filterTitle}>Price Range (₹)</Text>
             <View style={styles.filterRow}>
-              <TextInput style={styles.filterInput} placeholder="Min Price" keyboardType="numeric" value={minPrice} onChangeText={setMinPrice} />
-              <TextInput style={styles.filterInput} placeholder="Max Price" keyboardType="numeric" value={maxPrice} onChangeText={setMaxPrice} />
+              <TextInput style={styles.filterInput} placeholder="Min Price" keyboardType="numeric" value={minPrice} onChangeText={handleMinPriceChange} />
+              <TextInput style={styles.filterInput} placeholder="Max Price" keyboardType="numeric" value={maxPrice} onChangeText={handleMaxPriceChange} />
+            </View>
+
+            <Text style={styles.filterTitle}>Size Range (m²)</Text>
+            <View style={styles.filterRow}>
+              <TextInput style={styles.filterInput} placeholder="Min Size" keyboardType="numeric" value={minSize} onChangeText={setMinSize} />
+              <TextInput style={styles.filterInput} placeholder="Max Size" keyboardType="numeric" value={maxSize} onChangeText={setMaxSize} />
             </View>
             
             <Text style={styles.filterTitle}>Location & Facing</Text>
@@ -300,13 +345,13 @@ export default function ListScreen() {
 
             {viewingProperty && (
                <View>
-                  <Text style={styles.viewAddress}>{viewingProperty.address}</Text>
+                  <Text style={styles.viewAddress}>{viewingProperty.sector}</Text>
                   <Text style={styles.viewPrice}>{formatPrice(viewingProperty.price)}</Text>
                   
                   <View style={styles.viewGrid}>
                      <View style={styles.viewGridItem}>
-                         <Text style={styles.viewLabel}>Sector</Text>
-                         <Text style={styles.viewValue}>{viewingProperty.sector}</Text>
+                         <Text style={styles.viewLabel}>Address</Text>
+                         <Text style={styles.viewValue}>{viewingProperty.address}</Text>
                      </View>
                      <View style={styles.viewGridItem}>
                          <Text style={styles.viewLabel}>Size</Text>
@@ -321,6 +366,21 @@ export default function ListScreen() {
                            <Text style={styles.viewLabel}>Owner</Text>
                            <Text style={styles.viewValue}>{viewingProperty.owner_name}</Text>
                        </View>
+                     ) : null}
+                     {viewingProperty.contact ? (
+                       <>
+                           <View style={styles.viewGridItem}>
+                               <Text style={styles.viewLabel}>Phone</Text>
+                               <Text style={styles.viewValue}>{viewingProperty.contact}</Text>
+                           </View>
+                           <TouchableOpacity 
+                               onPress={() => Linking.openURL(`tel:${viewingProperty.contact}`)} 
+                               style={[styles.viewGridItem, { backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center' }]}
+                           >
+                               <IconSymbol name="phone.fill" size={28} color="#FFFFFF" />
+                               <Text style={{ color: '#FFFFFF', fontWeight: '900', marginTop: 8, fontSize: 16, letterSpacing: 0.5 }}>CALL</Text>
+                           </TouchableOpacity>
+                       </>
                      ) : null}
                   </View>
 
@@ -380,14 +440,14 @@ export default function ListScreen() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Address</Text>
-              <TextInput style={styles.input} value={editForm.address} onChangeText={(text) => setEditForm({...editForm, address: text})} />
+              <Text style={styles.label}>Sector</Text>
+              <TextInput style={styles.input} value={editForm.sector} onChangeText={(text) => setEditForm({...editForm, sector: text})} />
             </View>
 
             <View style={styles.row}>
               <View style={[styles.formGroup, styles.halfWidth]}>
-                <Text style={styles.label}>Sector</Text>
-                <TextInput style={styles.input} value={editForm.sector} onChangeText={(text) => setEditForm({...editForm, sector: text})} />
+                <Text style={styles.label}>Address</Text>
+                <TextInput style={styles.input} value={editForm.address} onChangeText={(text) => setEditForm({...editForm, address: text})} />
               </View>
               <View style={[styles.formGroup, styles.halfWidth]}>
                 <Text style={styles.label}>Size (m²)</Text>
@@ -402,7 +462,12 @@ export default function ListScreen() {
               </View>
               <View style={[styles.formGroup, styles.halfWidth]}>
                 <Text style={styles.label}>Facing</Text>
-                <TextInput style={styles.input} value={editForm.facing} onChangeText={(text) => setEditForm({...editForm, facing: text})} />
+                <TouchableOpacity style={styles.dropdownButton} onPress={() => setEditFacingDropdownOpen(true)}>
+                    <Text style={[styles.dropdownButtonText, !editForm.facing && {color: '#94A3B8'}]}>
+                        {editForm.facing || "Select Facing"}
+                    </Text>
+                    <IconSymbol name="chevron.down" size={20} color="#64748B" />
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -481,6 +546,22 @@ export default function ListScreen() {
         </TouchableOpacity>
       </Modal>
 
+      <Modal visible={isEditFacingDropdownOpen} transparent animationType="fade">
+        <TouchableOpacity style={styles.dropdownOverlay} activeOpacity={1} onPress={() => setEditFacingDropdownOpen(false)}>
+            <View style={styles.dropdownContent}>
+                <Text style={styles.dropdownTitle}>Select Facing</Text>
+                <ScrollView>
+                    {FACING_OPTIONS.filter(f => f !== 'ALL').map((f) => (
+                        <TouchableOpacity key={f} style={styles.dropdownOption} onPress={() => { setEditForm({...editForm, facing: f}); setEditFacingDropdownOpen(false); }}>
+                            <Text style={[styles.dropdownOptionText, editForm.facing === f && styles.dropdownOptionTextActive]}>{f}</Text>
+                            {editForm.facing === f && <IconSymbol name="checkmark" size={20} color="#4F46E5" />}
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+        </TouchableOpacity>
+      </Modal>
+
       <Modal visible={isSectorDropdownOpen} transparent animationType="fade">
         <TouchableOpacity style={styles.dropdownOverlay} activeOpacity={1} onPress={() => setSectorDropdownOpen(false)}>
             <View style={styles.dropdownContent}>
@@ -543,22 +624,23 @@ const styles = StyleSheet.create({
   dropdownOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F8FAFC' },
   dropdownOptionText: { fontSize: 18, color: '#64748B', fontWeight: '500' },
   dropdownOptionTextActive: { color: '#4F46E5', fontWeight: '900' },
-  listContent: { padding: 24, paddingBottom: 100 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, marginBottom: 24, shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.05, shadowRadius: 20, elevation: 5, borderWidth: 1, borderColor: '#F8FAFC' },
-  listCard: { width: '100%' },
-  gridCard: { width: (Dimensions.get('window').width - 60) / 2, marginHorizontal: 6, padding: 12 },
-  cardHeader: { marginBottom: 16 },
-  address: { fontSize: 18, fontWeight: '900', color: '#0F172A', marginBottom: 6, letterSpacing: -0.25 },
-  price: { fontSize: 24, fontWeight: '900', color: '#047857', letterSpacing: -0.5 },
-  detailsContainer: { marginBottom: 16, backgroundColor: '#F8FAFC', padding: 14, borderRadius: 16 },
-  details: { fontSize: 14, color: '#475569', marginBottom: 6, fontWeight: '500' },
+  listContent: { padding: 16, paddingBottom: 100 },
+  swipeContainerList: { marginBottom: 16, width: '100%' },
+  swipeActionBtn: { backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center', width: 100, borderRadius: 24 },
+  swipeActionText: { color: '#FFFFFF', fontWeight: '900', marginTop: 4, letterSpacing: 0.5 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16, shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 16, elevation: 4, borderWidth: 1, borderColor: '#F8FAFC', width: '100%' },
+  cardHeader: { marginBottom: 12 },
+  address: { fontSize: 16, fontWeight: '900', color: '#0F172A', marginBottom: 4, letterSpacing: -0.25 },
+  price: { fontSize: 20, fontWeight: '900', color: '#047857', letterSpacing: -0.5 },
+  detailsContainer: { marginBottom: 12, backgroundColor: '#F8FAFC', padding: 12, borderRadius: 12 },
+  details: { fontSize: 13, color: '#475569', marginBottom: 4, fontWeight: '500' },
   facingContainer: { flexDirection: 'row', alignItems: 'center' },
   facingBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginLeft: 6 },
   facingBadgeText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
   bold: { fontWeight: '800', color: '#0F172A' },
-  actions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
-  editBtn: { paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#EEF2FF', borderRadius: 14, width: '48%', alignItems: 'center' },
-  editBtnText: { color: '#4F46E5', fontWeight: '800', fontSize: 14 },
+  actions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+  editBtn: { paddingVertical: 10, paddingHorizontal: 16, backgroundColor: '#EEF2FF', borderRadius: 12, width: '48%', alignItems: 'center' },
+  editBtnText: { color: '#4F46E5', fontWeight: '800', fontSize: 13 },
   deleteBtn: { paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#FEF2F2', borderRadius: 14, width: '48%', alignItems: 'center' },
   deleteBtnText: { color: '#DC2626', fontWeight: '800', fontSize: 14 },
   emptyText: { textAlign: 'center', marginTop: 80, color: '#94A3B8', fontSize: 16, fontWeight: '600' },
@@ -599,4 +681,6 @@ const styles = StyleSheet.create({
   closeBottomBtnText: { color: '#0F172A', fontSize: 16, fontWeight: '800' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { fontSize: 16, color: '#4F46E5' },
+  phoneContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  callBtn: { backgroundColor: '#10B981', padding: 8, borderRadius: 12, marginLeft: 8 },
 });

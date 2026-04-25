@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -94,44 +95,46 @@ export default function RootLayout() {
   if (loading) return null;
 
   return (
-    <PropertyProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-          }}
-        >
-          <Stack.Screen 
-            name="login" 
-            options={{ 
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <PropertyProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack
+            screenOptions={{
               headerShown: false,
-              animation: 'fade',
-            }} 
-          />
-          <Stack.Screen 
-            name="reset-password" 
-            options={{ 
-               headerShown: false,
-               animation: 'slide_from_bottom',
-            }} 
-          />
-          <Stack.Screen 
-            name="update-password" 
-            options={{ 
-               headerShown: false,
-               animation: 'slide_from_right',
-            }} 
-          />
-          <Stack.Screen 
-            name="(tabs)" 
-            options={{ 
-              headerShown: false,
-              animation: 'fade',
-            }} 
-          />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </PropertyProvider>
+            }}
+          >
+            <Stack.Screen 
+              name="login" 
+              options={{ 
+                headerShown: false,
+                animation: 'fade',
+              }} 
+            />
+            <Stack.Screen 
+              name="reset-password" 
+              options={{ 
+                 headerShown: false,
+                 animation: 'slide_from_bottom',
+              }} 
+            />
+            <Stack.Screen 
+              name="update-password" 
+              options={{ 
+                 headerShown: false,
+                 animation: 'slide_from_right',
+              }} 
+            />
+            <Stack.Screen 
+              name="(tabs)" 
+              options={{ 
+                headerShown: false,
+                animation: 'fade',
+              }} 
+            />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </PropertyProvider>
+    </GestureHandlerRootView>
   );
 }

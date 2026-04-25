@@ -29,6 +29,7 @@ const MAPPING = {
   'lock.fill': 'lock',
   'chevron.left': 'chevron-left',
   'trash': 'delete',
+  'phone.fill': 'phone',
 } as IconMapping;
 
 /**

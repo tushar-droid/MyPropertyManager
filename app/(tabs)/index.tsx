@@ -1,5 +1,5 @@
 import React, { useState, useContext, useMemo } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Modal, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PropertyContext } from '@/context/PropertyContext';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -18,6 +18,9 @@ export default function AddProperty() {
   const [tags, setTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isFacingDropdownOpen, setFacingDropdownOpen] = useState(false);
+  
+  const FACING_OPTIONS = ['NORTH', 'SOUTH', 'EAST', 'WEST', 'NORTH-EAST', 'NORTH-WEST', 'SOUTH-EAST', 'SOUTH-WEST'];
   
   const DEFAULT_TAGS = ['PARK FACING', 'HIGHWAY FACING', 'CORNER', 'MAIN ROAD', 'GATED SOCIETY', 'BUILDER FLOOR'];
 
@@ -97,14 +100,14 @@ export default function AddProperty() {
           
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Address</Text>
-              <TextInput style={styles.input} value={address} onChangeText={setAddress} placeholder="Enter full address" />
+              <Text style={styles.label}>Sector</Text>
+              <TextInput style={styles.input} value={sector} onChangeText={setSector} placeholder="e.g. 82" />
             </View>
 
             <View style={styles.row}>
               <View style={[styles.inputGroup, { width: '48%' }]}>
-                <Text style={styles.label}>Sector</Text>
-                <TextInput style={styles.input} value={sector} onChangeText={setSector} placeholder="e.g. 82" />
+                <Text style={styles.label}>Address</Text>
+                <TextInput style={styles.input} value={address} onChangeText={setAddress} placeholder="Enter address" />
               </View>
               <View style={[styles.inputGroup, { width: '48%' }]}>
                 <Text style={styles.label}>Size (m²)</Text>
@@ -119,7 +122,12 @@ export default function AddProperty() {
               </View>
               <View style={[styles.inputGroup, { width: '48%' }]}>
                 <Text style={styles.label}>Facing</Text>
-                <TextInput style={styles.input} value={facing} onChangeText={setFacing} placeholder="NORTH" />
+                <TouchableOpacity style={styles.dropdownButton} onPress={() => setFacingDropdownOpen(true)}>
+                    <Text style={[styles.dropdownButtonText, !facing && {color: '#94A3B8'}]}>
+                        {facing || "Select Facing"}
+                    </Text>
+                    <IconSymbol name="chevron.down" size={20} color="#64748B" />
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -185,6 +193,22 @@ export default function AddProperty() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal visible={isFacingDropdownOpen} transparent animationType="fade">
+        <TouchableOpacity style={styles.dropdownOverlay} activeOpacity={1} onPress={() => setFacingDropdownOpen(false)}>
+            <View style={styles.dropdownContent}>
+                <Text style={styles.dropdownTitle}>Select Facing</Text>
+                <ScrollView>
+                    {FACING_OPTIONS.map((f) => (
+                        <TouchableOpacity key={f} style={styles.dropdownOption} onPress={() => { setFacing(f); setFacingDropdownOpen(false); }}>
+                            <Text style={[styles.dropdownOptionText, facing === f && styles.dropdownOptionTextActive]}>{f}</Text>
+                            {facing === f && <IconSymbol name="checkmark" size={20} color="#4F46E5" />}
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -213,4 +237,12 @@ const styles = StyleSheet.create({
   submitButton: { backgroundColor: '#4F46E5', borderRadius: 20, paddingVertical: 20, alignItems: 'center', marginTop: 12, shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 15, elevation: 8 },
   submitButtonDisabled: { opacity: 0.7 },
   submitButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
+  dropdownButton: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#F1F5F9', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 18 },
+  dropdownButtonText: { fontSize: 16, color: '#0F172A', fontWeight: '500' },
+  dropdownOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.65)', justifyContent: 'flex-end', alignItems: 'center' },
+  dropdownContent: { width: '100%', backgroundColor: '#FFFFFF', borderTopLeftRadius: 36, borderTopRightRadius: 36, padding: 32, maxHeight: Dimensions.get('window').height * 0.6 },
+  dropdownTitle: { fontSize: 24, fontWeight: '900', color: '#0F172A', marginBottom: 24, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  dropdownOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F8FAFC' },
+  dropdownOptionText: { fontSize: 18, color: '#64748B', fontWeight: '500' },
+  dropdownOptionTextActive: { color: '#4F46E5', fontWeight: '900' },
 });
